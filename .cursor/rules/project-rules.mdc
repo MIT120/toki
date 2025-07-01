@@ -1,0 +1,206 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Modern Next.js Application Architecture
+
+This document outlines a scalable architecture for Next.js applications, describing the organization, data flow, and implementation of server actions.
+
+## Project Structure
+
+```
+project-root/
+├── app/               # Next.js app directory (pages and routes)
+├── api/               # API client interfaces
+├── components/        # UI components
+├── contexts/          # React context providers
+├── data/              # Data access layer (database operations)
+├── hooks/             # Custom React hooks
+├── services/          # Business logic layer with server actions
+├── types/             # TypeScript type definitions
+└── utils/             # Utility functions and helpers
+    └── mappers/       # Data transformation mappers
+```
+
+## Core Architecture Concepts
+
+### Server Actions
+
+This architecture uses Next.js server actions for all backend operations. Server actions are identified by the `"use server"` directive at the top of files. This approach provides:
+
+- Type-safe function calls between client and server
+- Automatic serialization/deserialization of data
+- Progressive enhancement with fallbacks to traditional form submissions
+- Built-in error handling and revalidation
+
+### Data Flow
+
+The data flow follows a clear pattern:
+
+1. **Client Components** → Call server actions from the services layer
+2. **Services Layer** → Contains business logic and orchestrates operations
+3. **Data Access Layer** → Interacts directly with the database
+4. **API Layer** → Makes calls to external services
+
+```
+Client Component → Services Layer → Data Layer → Database
+                                  → API Layer → External Services
+```
+
+## Layer Responsibilities
+
+### Services Layer (`/services`)
+
+Server action functions responsible for:
+- Implementing business logic
+- Validating incoming data
+- Orchestrating calls to the data layer and external APIs
+- Transforming data between backend and frontend formats
+
+Every service function is a server action marked with `"use server"` at the top of the file.
+
+Example:
+```typescript
+// exampleService.ts
+"use server"
+
+export async function createResource(resourceData: ResourceData): Promise<ResourceResponse> {
+  validateData(resourceData);
+  const userId = await getCurrentUserId();
+  
+  // Business logic and orchestration
+  // ...
+
+  return await resourceApi.createResource(request);
+}
+```
+
+### Data Layer (`/data`)
+
+Pure data access functions that:
+- Handle database queries via your ORM/database client
+- Implement data-specific error handling
+- Focus on single-purpose operations
+- Return raw database entities
+
+Example:
+```typescript
+// resourceData.ts
+export async function getResourcesByUserId(userId: string): Promise<ResourceEntity[]> {
+  const db = await getDbClient();
+  
+  // Database queries
+  // ...
+  
+  return resources;
+}
+```
+
+### API Layer (`/api`)
+
+Client interfaces for external services:
+- Define endpoints and request/response handling
+- Handle authentication with external services
+- Abstract external API complexity
+
+Example:
+```typescript
+// resourceApi.ts
+export const resourceApi = {
+  async createResource(data: ResourceRequest): Promise<ResourceResponse> {
+    return makeAuthenticatedRequest('POST', '/resources', data);
+  },
+};
+```
+
+### Types Organization (`/types`)
+
+Types are organized by their purpose:
+- `/types/entity` - Database entity types
+- `/types/ui` - Frontend UI component props and state
+- `/types/request` - API request payloads
+- `/types/response` - API response structures
+- `/types/errors` - Custom error types
+
+### Mappers (`/utils/mappers`)
+
+Mappers are utility functions that transform data between different type representations:
+- Transform backend entities (`BE`) to frontend UI models (`UI`)
+- Standardize data transformation across the application
+- Isolate transformation logic from business logic
+
+Example:
+```typescript
+// customersMapper.ts
+export function transformCustomer(customer: CustomerBE): CustomerUI {
+  return {
+    id: customer.id,
+    name: customer.name,
+    totalOrders: customer.total_orders || 0,
+    totalSales: customer.total_sales || 0,
+    shops: customer.shops?.map(transformShop) || []
+  };
+}
+```
+
+## Best Practices
+
+### Server Actions Implementation
+
+1. Always add `"use server"` at the top of files containing server actions
+2. Keep server actions in the services layer
+3. Implement proper validation for all incoming data
+4. Use typed request/response interfaces
+5. Handle errors appropriately and return user-friendly messages
+
+### Data Access
+
+1. Keep database operations focused and single-purpose
+2. Use proper error handling with custom error types
+3. Implement proper security checks (e.g., user ID verification)
+4. Use transactions for operations that modify multiple tables
+
+### Security Considerations
+
+1. Always verify user permissions before operations
+2. Never expose sensitive database fields to the client
+3. Validate all user inputs on the server side
+4. Use parameterized queries to prevent SQL injection
+
+## Implementation Example
+
+Here's a typical flow for creating a resource:
+
+1. **Client Component**: User submits a form with resource data
+2. **Service Layer**: `createResource()` server action validates data and orchestrates the process
+3. **Data Layer**: `getRelatedResources()` retrieves necessary data
+4. **Utility**: `uploadFile()` handles file uploads if needed
+5. **API Layer**: `resourceApi.createResource()` sends the request to external service
+6. **Response**: Data is returned to the client
+
+
+### Data Transformation with Mappers
+
+1. Create dedicated mapper functions for each entity type
+2. Keep mappers pure and focused on a single transformation
+3. Compose mappers for complex nested structures
+4. Use consistent naming conventions (`transformX` or `xToY`)
+5. Handle null/undefined values and provide sensible defaults
+6. Keep business logic out of mappers - they should only transform data
+7. Use TypeScript to ensure type safety between BE and UI models
+
+## Adapting This Pattern
+
+When adapting this architecture for your projects:
+
+1. Start by defining your data types in the `/types` directory
+2. Implement data access functions in the `/data` directory
+3. Create API clients in the `/api` directory if needed
+4. Implement business logic as server actions in the `/services` directory
+5. Build client components that call your server actions

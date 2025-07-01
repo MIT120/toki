@@ -1,0 +1,252 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Etokak API Reference Rules
+
+This document contains the complete API reference for the Etokak platform. Always reference this when working with API integrations.
+
+**Official API Documentation**: https://dev-docs.etokak.bg/api
+
+## API Structure
+
+All API endpoints follow this structure:
+```
+https://dev.etokak.bg/api/v1/{resource}/{id?}
+```
+
+### Common Parameters - Pagination
+
+| Parameter | Type    | Description                                       |
+| --------- | ------- | ------------------------------------------------- |
+| limit     | integer | Number of items to return (default: 20, max: 100) |
+| offset    | integer | Number of items to skip (for pagination)          |
+
+## Authentication API (`/auth`)
+
+### POST /auth/login
+Authenticates the user with credentials and returns JWT token
+
+**Request Format:**
+```json
+{
+    "email": "user@example.com",
+    "password": "user_password",
+    "clientId": "web-app" | "admin-dashboard"
+}
+```
+
+**Response Format:**
+```json
+{
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresAt": 1742193986
+}
+```
+
+**Error Responses:**
+- `400` - Bad request (invalid JSON payload)
+- `401` - Unauthorized - Invalid credentials
+
+**Implementation Rules:**
+- Always use `clientId: "admin-dashboard"` for admin applications
+- Always use `clientId: "web-app"` for user-facing applications
+- Store `accessToken`, `refreshToken`, and `expiresAt` securely
+- Implement automatic token refresh before expiration
+
+### POST /auth/refresh
+Refreshes the tokens.
+
+**⚠️ IMPORTANT**: After a successful token refresh, BOTH the access and refresh tokens are invalidated. You must use the newly issued tokens.
+
+**Request Format:**
+```json
+{
+    "refreshToken": "your_refresh_token"
+}
+```
+
+**Response Format:**
+```json
+{
+    "accessToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "refreshToken": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
+    "expiresAt": 1742193986
+}
+```
+
+### GET /me
+Returns information about the current authenticated user.
+
+**Headers Required:**
+```
+Authorization: Bearer {accessToken}
+```
+
+**Response Format:**
+```json
+{
+    "id": "22d96ff9-1fcd-41bd-a37b-46e216db2018",
+    "name": "John Doe",
+    "email": "user@example.com",
+    "role": "admin"
+}
+```
+
+## Gameplay API (`/gameplay`)
+
+**Note**: Detailed gameplay endpoints are available in the API docs. Common patterns include:
+- Session management
+- Progress tracking
+- Score submission
+- Achievement tracking
+
+## Question and Answer Types
+
+**Note**: The API supports various question types. Refer to the full documentation for:
+- Question structure formats
+- Answer validation rules
+- Scoring mechanisms
+- Question metadata
+
+## Lessons API (`/lessons`)
+
+**Note**: Lesson management endpoints for:
+- Lesson retrieval
+- Progress tracking
+- Content delivery
+- Assessment integration
+
+## File Upload API (`/upload`)
+
+**Note**: File upload endpoints supporting:
+- Image uploads
+- Document uploads
+- Media file handling
+- File validation rules
+
+## Debug Endpoints
+
+### GET /status
+Returns the status of the API backend
+
+**Permissions**: None required
+
+**Response Format:**
+```json
+{
+    "status": "ok",
+    "version": "v0.0.12",
+    "commit": "fb11f5c",
+    "buildDate": "Sun Mar 16 12:53:31 UTC 2025"
+}
+```
+
+### GET /config
+Returns global configuration
+
+**Permissions**: None required
+
+**Response Format:**
+```json
+{
+    "passwordRules": {
+        "minLength": 8,
+        "maxLength": 64,
+        "mustUpper": false,
+        "mustLower": false,
+        "mustDigit": false,
+        "mustSpecial": false
+    }
+}
+```
+
+## Implementation Guidelines
+
+### Error Handling
+- Always implement proper error handling for all API calls
+- Use appropriate HTTP status codes for error identification
+- Provide user-friendly error messages based on API responses
+- Log detailed error information for debugging
+
+### Security Best Practices
+- Never expose access tokens in client-side code
+- Implement proper token refresh logic
+- Use HTTPS for all API communications
+- Validate all user inputs before sending to API
+- Store sensitive data securely (use secure storage for tokens)
+
+### Request Headers
+Always include these headers for API requests:
+```
+Content-Type: application/json
+Authorization: Bearer {accessToken} (for authenticated endpoints)
+```
+
+### TypeScript Types
+Create proper TypeScript interfaces for all API requests and responses:
+
+```typescript
+// Auth Types
+interface LoginRequest {
+    email: string;
+    password: string;
+    clientId: "web-app" | "admin-dashboard";
+}
+
+interface AuthResponse {
+    accessToken: string;
+    refreshToken: string;
+    expiresAt: number;
+}
+
+interface User {
+    id: string;
+    name: string;
+    email: string;
+    role: string;
+}
+```
+
+### API Client Structure
+Follow this pattern for API client organization:
+```
+/api
+  ├── auth.ts          # Authentication endpoints
+  ├── gameplay.ts      # Gameplay-related endpoints
+  ├── lessons.ts       # Lesson management endpoints
+  ├── upload.ts        # File upload endpoints
+  └── types.ts         # Shared API types
+```
+
+### Service Layer Integration
+- Keep API calls in the `/api` directory
+- Business logic should be in `/services` directory
+- Use server actions for Next.js applications
+- Implement proper data transformation between API and UI layers
+
+## Rate Limiting and Performance
+- Implement appropriate caching strategies
+- Respect API rate limits
+- Use pagination for large data sets
+- Implement optimistic updates where appropriate
+
+## Development and Testing
+- Always test against the development API: `https://dev.etokak.bg/api/v1`
+- Use the `/status` endpoint to verify API connectivity
+- Test all error scenarios and edge cases
+- Implement proper loading states for API calls
+
+## Documentation Updates
+- Always refer to the latest API documentation: https://dev-docs.etokak.bg/api
+- Check the changelog for API updates
+- Update this rules file when new endpoints are added
+- Maintain consistency with the official API documentation
+
+---
+
+**Last Updated**: Based on API documentation at https://dev-docs.etokak.bg/api
+**Version**: Latest available as of document creation
+**Contact**: Refer to the official API documentation for support information 

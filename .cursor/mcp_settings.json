@@ -1,0 +1,12 @@
+{
+    "mcpServers": {
+        "pdf-reader-mcp": {
+            "command": "npx",
+            "args": [
+                "@sylphlab/pdf-reader-mcp"
+            ],
+            "name": "PDF Reader",
+            "description": "Read and extract content from PDF files - supports local files and URLs"
+        }
+    }
+}

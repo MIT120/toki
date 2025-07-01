@@ -1,0 +1,12 @@
+{
+  "type": "service_account",
+  "project_id": "toki-take-home",
+  "private_key_id": "774e713e21c1ac7f0192b25bcfc6f35de03e1ec5",
+  "private_key": "-----BEGIN PRIVATE KEY-----\nMIIEvAIBADANBgkqhkiG9w0BAQEFAASCBKYwggSiAgEAAoIBAQCZTnU9cssIjNbR\nYr0Nq32HDMpoqYMw9MUnrmBwCVKzuzVi3O1ckAeHDF7WIp16+w0T9g1g02KjTA4/\npJyvl/oIYx7IWVXa5W4rW5d4xQ0TI+InrTf8bN5i/Cv7tCb7zkXt+FPFPnGLsbKR\np6lVvAXtK3JSnbgod+4Hj4HEyas3uIzm/RtqKFpPdoAC/8ZM7GwU59QypQ70voUU\nMCewkmYX+YbVKdrCvVwt/VenEBk+C04L05HY0bDQUWKIhjqGm0H9oudfNp2fK6H/\n7fuu6BXRHzJZDQ2UMK7ilEsQ26zELzrhaxplbjlk478wrfdYztPSYOeIxEBCaWWC\n9H6D+EcLAgMBAAECggEAFaCdZolSvkaMKabZz9thDpPN3D0JvnbRd3sgrL2L9sIS\n0nsjWzsQbMtgd6oTeF2BZ07/bSj1Ed9xZSYWWqlAgz1kgtQjigly5Nf7gvSdlxUp\nWvqTWt+K8gDsPYqZM03SzLMLMljQUOpFLEowV+F6Ho7SBnismbztjhB/OKFQr7/3\n3s/IfXeCjk4gQd3EDxyMZyR5oSdcEx7BSMFYbIGvUciLeUqnXX6/vLADyRzLUttN\nllXXb/sNj5hyj61wSfTV3YFlrn0HoZf5zB54i8y4/a6QuHRwEWpAinS7oLp1S955\nCnM0KvuMkTHDrTp5f2vvCbpYtHazvjdusDRB7tmnQQKBgQDP3xypT6TySvTjph7O\n0rxV7UJ/ZEKY9VdzIKg6hBa7RO3P0Hzche1T6Vmj6OxIsDkP0CPGsM8ivcIOdYke\nFtStacCQVm1YnaVV4bgaxaxPD3QYvA9iSrEFV8RrBreZiND3ThJEmiCAOMSgajxv\n91T9gX7jdDWEYsDquyNMZK4EywKBgQC8zS9yxmhTYWX5rOnien1MHaAv+d7nSdJo\n5RnwscMDYArrLOB6C6IvvaJRgxAaDPdgNDLhWqPNMxu1QnY14sd1IJC/rL3bunim\nTIboAX7ffE40prEJ6zjcwuqe3EV+yAWJXkKY9Lh2rxiMMGRNDnOw+QAvZDGxUACB\ni/f08Ki+wQKBgBhCETYw9S7RUILAgBfiv9fHOFtld+AhwXLN/NPXVk/EW3xE+E1D\n085XDP7zz58r8XzG7WXifEmxm1PUo4u/XlJeZPpzG4+b1g+Pp8x4BQO06fd4+tKd\npMra0zEqN4LTVI+HrNoUonZUKZ4Ox77JPkHXOteQWC5618iMzjG8DhLBAoGASJyN\nVBIUi4TZCFZFOVIsoDqAohLydHeC0c7S1Cw5uTGV4W7IAog43y2KoNjMN4inFzvc\nGamXd9LhJCwkdIL8fQKCSQVxm3Ey95pVBCOXHPKczUkSq6LoopbgTyqeG61n27YB\n3Pu5egPLaBcwbCZTvkt1k8RwDCadmzUuruhjrcECgYBEFHG+unyDdSx7qC5J7j4s\nqSPGAAH15abuxtT/tX6j9H6XyejqPQXFl4IMkFMpQZufzFLFWwSEIwY7usHAqkU5\nhlCO04utbuJg91k0OH+laznrAzgDsXA7Rgfb2hneIvs4EtCTfdrPrjprDhDea30w\nAKstGNNCQ1nvXjJow1uGOw==\n-----END PRIVATE KEY-----\n",
+  "client_email": "take-home-python@toki-take-home.iam.gserviceaccount.com",
+  "client_id": "112149556134649917951",
+  "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+  "token_uri": "https://oauth2.googleapis.com/token",
+  "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+  "client_x509_cert_url": "https://www.googleapis.com/robot/v1/metadata/x509/take-home-python%40toki-take-home.iam.gserviceaccount.com"
+}

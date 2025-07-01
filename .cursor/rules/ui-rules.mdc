@@ -1,0 +1,318 @@
+---
+description: 
+globs: 
+alwaysApply: true
+---
+---
+description: 
+globs: 
+alwaysApply: true
+---
+# Cursor Rules for Etokak Frontend
+
+## UI Component Guidelines
+
+### shadcn Components Only
+- **ALWAYS use shadcn/ui components** for all UI elements
+- **NEVER use other UI libraries** (Material-UI, Ant Design, Chakra UI, etc.)
+- **NEVER create custom styled components** when a shadcn equivalent exists
+- If a shadcn component doesn't exist, create a custom component following shadcn patterns
+
+### Component Installation
+- Use the correct shadcn command: `npx shadcn@latest add [component-name]`
+- **NEVER use the deprecated `shadcn-ui` package**
+
+### Component Variants and Reusability
+- **ALWAYS use component variants** instead of overriding styles when possible
+- **ALWAYS check if a component already exists** before creating a new one
+- **PREFER extending existing components** with new variants over creating duplicates
+- **USE built-in component props** (size, variant, etc.) instead of custom styling
+
+#### ❌ BAD - Overriding component styles:
+```tsx
+// Don't override Button styles
+<Button className="bg-red-500 text-white px-8 py-4 text-lg">
+  Delete
+</Button>
+
+// Don't create duplicate components
+export function RedButton({ children }: { children: React.ReactNode }) {
+  return <Button className="bg-red-500 text-white">{children}</Button>
+}
+```
+
+#### ✅ GOOD - Using variants and existing components:
+```tsx
+// Use existing Button variants
+<Button variant="destructive" size="lg">
+  Delete
+</Button>
+
+// Extend existing Button with new variants
+const buttonVariants = cva(
+  "inline-flex items-center justify-center rounded-md text-sm font-medium",
+  {
+    variants: {
+      variant: {
+        default: "bg-primary text-primary-foreground hover:bg-primary/90",
+        destructive: "bg-destructive text-destructive-foreground hover:bg-destructive/90",
+        outline: "border border-input hover:bg-accent hover:text-accent-foreground",
+        // Add new variant instead of creating new component
+        success: "bg-green-600 text-white hover:bg-green-700",
+      },
+      size: {
+        default: "h-10 px-4 py-2",
+        sm: "h-9 rounded-md px-3",
+        lg: "h-11 rounded-md px-8",
+      },
+    },
+  }
+)
+```
+
+### Component Discovery and Reuse
+- **ALWAYS search existing components** in `/components/ui/` and `/components/common/` before creating new ones
+- **CHECK component props and variants** to see if they meet your needs
+- **EXTEND existing components** with additional variants rather than duplicating
+- **DOCUMENT component variants** in JSDoc comments for discoverability
+
+### Reusable Component Creation
+- **NEVER put complex component combinations inline** in screens/pages
+- **ALWAYS create separate reusable components** when combining multiple shadcn components
+- Place reusable components in appropriate directories:
+  - `/components/ui/` - For general UI components
+  - `/components/[feature]/` - For feature-specific components
+  - `/components/common/` - For shared business logic components
+
+## Styling Guidelines
+
+### Primary Styling Approach - Tailwind CSS
+- **ALWAYS use Tailwind CSS classes** as the primary styling solution
+- **NEVER use CSS-in-JS libraries** (styled-components, emotion, etc.)
+- **NEVER use inline styles** unless absolutely necessary
+- **NEVER create custom CSS classes** when Tailwind equivalents exist
+
+### Tailwind Class Usage Rules
+- Use utility classes for all styling: `className="flex items-center space-x-2 p-4"`
+- Prefer Tailwind's design tokens: `text-sm`, `text-lg`, `space-x-4`, `p-6`
+- Use responsive prefixes: `md:flex-row`, `lg:grid-cols-3`, `sm:text-base`
+- Use state variants: `hover:bg-gray-100`, `focus:ring-2`, `disabled:opacity-50`
+- Use dark mode variants when needed: `dark:bg-gray-800`, `dark:text-white`
+
+### When Inline Styles Are Acceptable
+Only use inline styles for:
+- **Dynamic styles that cannot be achieved with Tailwind**:
+  ```tsx
+  // ✅ GOOD - Dynamic positioning
+  <div style={{ transform: `translateX(${position}px)` }}>
+  
+  // ✅ GOOD - Dynamic colors from API
+  <div style={{ backgroundColor: user.themeColor }}>
+  ```
+- **Third-party component overrides**:
+  ```tsx
+  // ✅ GOOD - Overriding library component styles
+  <ThirdPartyComponent style={{ zIndex: 9999 }} />
+  ```
+- **Complex animations that require specific CSS properties**:
+  ```tsx
+  // ✅ GOOD - Complex keyframe animations
+  <div style={{ 
+    animation: 'custom-bounce 2s ease-in-out infinite',
+    transformOrigin: 'center bottom'
+  }}>
+  ```
+
+### Custom Properties for Dynamic Styles
+When Tailwind cannot handle dynamic values, create CSS custom properties:
+
+#### ❌ BAD - Inline styles for dynamic values:
+```tsx
+<div style={{ 
+  width: `${progress}%`,
+  height: `${barHeight}px`,
+  backgroundColor: statusColor 
+}}>
+```
+
+#### ✅ GOOD - CSS custom properties:
+```tsx
+// Component
+<div 
+  className="w-[--progress-width] h-[--bar-height] bg-[--status-color] transition-all"
+  style={{
+    '--progress-width': `${progress}%`,
+    '--bar-height': `${barHeight}px`,
+    '--status-color': statusColor
+  } as React.CSSProperties}
+>
+
+// Or with CSS variables in globals.css
+<div 
+  className="progress-bar"
+  style={{
+    '--progress': progress,
+    '--height': barHeight,
+    '--color': statusColor
+  } as React.CSSProperties}
+>
+```
+
+### Global Styles in globals.css
+- **Keep `globals.css` minimal** - only add what cannot be achieved with Tailwind
+- **Document all global styles** with comments explaining why they're needed
+- **Use CSS custom properties** for theme values that need to be dynamic
+
+#### Acceptable global styles:
+```css
+/* globals.css */
+
+/* Custom properties for dynamic theming */
+:root {
+  --sidebar-width: 16rem;
+  --header-height: 4rem;
+  --animation-speed: 0.3s;
+}
+
+/* Complex animations that can't be done with Tailwind */
+@keyframes custom-slide-in {
+  from { transform: translateX(-100%) scale(0.95); }
+  to { transform: translateX(0) scale(1); }
+}
+
+.slide-in-animation {
+  animation: custom-slide-in var(--animation-speed) ease-out;
+}
+
+/* Third-party component overrides */
+.react-datepicker-wrapper {
+  @apply w-full;
+}
+
+/* Complex pseudo-selectors not available in Tailwind */
+.custom-scrollbar::-webkit-scrollbar {
+  @apply w-2;
+}
+```
+
+### Component Styling Examples
+
+#### ❌ BAD Examples:
+```tsx
+// Don't use styled-components
+const StyledButton = styled.button`
+  padding: 1rem;
+  background: blue;
+`;
+
+// Don't use inline styles for static values
+<div style={{ padding: '16px', display: 'flex' }}>
+
+// Don't create custom CSS classes for simple styling
+// styles.module.css
+.myButton {
+  padding: 1rem;
+  background-color: blue;
+}
+```
+
+#### ✅ GOOD Examples:
+```tsx
+// Use Tailwind classes
+<button className="p-4 bg-blue-500 hover:bg-blue-600 transition-colors">
+
+// Use CSS custom properties for dynamic values
+<div 
+  className="w-[--dynamic-width] bg-[--theme-color]"
+  style={{
+    '--dynamic-width': `${width}px`,
+    '--theme-color': themeColor
+  } as React.CSSProperties}
+>
+
+// Combine Tailwind with custom properties
+<div className="flex items-center transition-all duration-[--animation-speed]">
+```
+
+### Responsive Design Rules
+- **Always use Tailwind's responsive prefixes**: `sm:`, `md:`, `lg:`, `xl:`, `2xl:`
+- **Design mobile-first**: Base classes for mobile, then add responsive variants
+- **Use consistent breakpoints**: Follow Tailwind's default breakpoint system
+
+```tsx
+// ✅ GOOD - Mobile-first responsive design
+<div className="
+  flex flex-col space-y-4
+  md:flex-row md:space-y-0 md:space-x-6
+  lg:grid lg:grid-cols-3 lg:gap-8
+">
+```
+
+### Color and Theme Usage
+- **Use Tailwind's color palette**: `bg-gray-100`, `text-blue-600`, `border-red-300`
+- **Use semantic color names**: `bg-primary`, `text-destructive`, `border-muted`
+- **For dynamic colors**: Use CSS custom properties with Tailwind's arbitrary value syntax
+
+```tsx
+// ✅ GOOD - Semantic colors
+<button className="bg-primary text-primary-foreground hover:bg-primary/90">
+
+// ✅ GOOD - Dynamic colors with custom properties
+<div className="bg-[--user-color] text-[--contrast-color]">
+```
+
+## Component Architecture Rules
+
+### Component Responsibilities
+- **Components should be presentational only**
+- **Accept props and render them** - no business logic
+- **Keep components pure and predictable**
+- **No side effects** in component rendering
+
+### Component Structure
+- Keep components focused on a single responsibility
+- Accept props for customization instead of hardcoding values
+- Use TypeScript interfaces for prop types
+- Export components as named exports
+- Include proper JSDoc comments for complex components
+
+### File Organization
+- One component per file
+- Co-locate related components in feature directories
+- Use index.ts files for clean imports
+- Keep component files focused and under 200 lines when possible
+
+## Examples of Component Extraction
+
+### Data Tables
+❌ Don't put table structure inline in screens
+✅ Create `<DataTable>`, `<TableHeader>`, `<TableRow>` components
+
+### Forms
+❌ Don't put form fields inline in screens  
+✅ Create `<ContactForm>`, `<FilterForm>`, `<SearchForm>` components
+
+### Cards and Lists
+❌ Don't put card layouts inline in screens
+✅ Create `<ProductCard>`, `<UserListItem>`, `<StatCard>` components
+
+### Modals and Dialogs
+❌ Don't put dialog content inline in screens
+✅ Create `<ConfirmDialog>`, `<EditUserModal>`, `<FilterDialog>` components
+
+## Enforcement
+- Code reviews should check for inline component combinations
+- Refactor existing inline combinations when encountered
+- Prioritize reusability and maintainability over quick implementation
+- Always prefer Tailwind classes over custom CSS
+- **Always check for existing components before creating new ones**
+- **Use component variants instead of style overrides**
+- **Extend existing components rather than duplicating functionality**
+- Document any deviations from these rules with clear justification
+
+## Component Development Workflow
+1. **Search existing components** - Check if a similar component already exists
+2. **Check component variants** - See if existing variants meet your needs
+3. **Extend with new variants** - Add new variants to existing components when possible
+4. **Create new component** - Only if no existing component can be extended
+5. **Document variants** - Add JSDoc comments explaining available variants and usage
