@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getDailySummaryAction } from '../../../../src/services/analytics-service';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);

@@ -1,141 +1,149 @@
-import { BarChart3, Database, Settings, Users } from 'lucide-react'
-import { Button } from '../src/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../src/components/ui/card'
+"use client";
 
-export default function Dashboard() {
+import { useState } from 'react';
+import { Badge } from '../src/components/ui/badge';
+import { Card, CardContent, CardHeader, CardTitle } from '../src/components/ui/card';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../src/components/ui/select';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../src/components/ui/tabs';
+
+import CostAnalysisComponent from '../src/components/analysis/cost-analysis';
+import HourlyChart from '../src/components/charts/hourly-chart';
+import DashboardOverviewComponent from '../src/components/dashboard/dashboard-overview';
+import DateSelector from '../src/components/filters/date-selector';
+import RealTimeInsightsComponent from '../src/components/insights/real-time-insights';
+import Navigation from '../src/components/layout/navigation';
+import ElectricityDataTable from '../src/components/tables/electricity-data-table';
+
+export default function ElectricityDashboard() {
+    const [selectedDate, setSelectedDate] = useState('2022-05-27');
+    const [selectedMeter, setSelectedMeter] = useState<string>('1234');
+
+    const availableMeters = [
+        { id: '1234', name: 'Main Bakery', location: 'Production Floor' },
+        { id: '5678', name: 'Retail Store', location: 'Customer Area' }
+    ];
+
+    const availableDates = [
+        '2022-05-25',
+        '2022-05-26',
+        '2022-05-27',
+        '2022-05-28',
+        '2022-05-29'
+    ];
+
+    const currentMeter = availableMeters.find(m => m.id === selectedMeter);
+
     return (
-        <div className="min-h-screen bg-gray-50">
-            <div className="bg-white shadow">
-                <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                    <div className="flex justify-between items-center py-6">
-                        <div className="flex items-center">
-                            <h1 className="text-3xl font-bold text-gray-900">Toki Dashboard</h1>
+        <Navigation>
+            <div className="container mx-auto p-6 space-y-6">
+                <div className="flex items-center justify-between">
+                    <div>
+                        <h1 className="text-3xl font-bold tracking-tight">Electricity Management</h1>
+                        <p className="text-muted-foreground">
+                            Monitor and optimize your bakery's energy consumption
+                        </p>
+                    </div>
+                    <Badge variant="outline" className="text-sm">
+                        Demo with Sample Data
+                    </Badge>
+                </div>
+
+                <div className="grid gap-6 md:grid-cols-4">
+                    <div className="md:col-span-1">
+                        <Card>
+                            <CardHeader>
+                                <CardTitle>Metering Point</CardTitle>
+                            </CardHeader>
+                            <CardContent>
+                                <Select value={selectedMeter} onValueChange={setSelectedMeter}>
+                                    <SelectTrigger>
+                                        <SelectValue placeholder="Select meter" />
+                                    </SelectTrigger>
+                                    <SelectContent>
+                                        {availableMeters.map((meter) => (
+                                            <SelectItem key={meter.id} value={meter.id}>
+                                                <div className="flex flex-col">
+                                                    <span className="font-medium">{meter.name}</span>
+                                                    <span className="text-xs text-muted-foreground">
+                                                        {meter.location} • ID: {meter.id}
+                                                    </span>
+                                                </div>
+                                            </SelectItem>
+                                        ))}
+                                    </SelectContent>
+                                </Select>
+
+                                {currentMeter && (
+                                    <div className="mt-4 p-3 bg-muted rounded-lg">
+                                        <h3 className="font-semibold text-sm">{currentMeter.name}</h3>
+                                        <p className="text-xs text-muted-foreground">{currentMeter.location}</p>
+                                        <Badge variant="secondary" className="mt-2">
+                                            ID: {currentMeter.id}
+                                        </Badge>
+                                    </div>
+                                )}
+                            </CardContent>
+                        </Card>
+
+                        <div className="mt-6">
+                            <DateSelector
+                                selectedDate={selectedDate}
+                                onDateChange={setSelectedDate}
+                                availableDates={availableDates}
+                                title="Analysis Date"
+                            />
                         </div>
-                        <div className="flex items-center space-x-4">
-                            <Button variant="outline">
-                                <Settings className="w-4 h-4 mr-2" />
-                                Settings
-                            </Button>
-                        </div>
+                    </div>
+
+                    <div className="md:col-span-3">
+                        <Tabs defaultValue="overview" className="space-y-6">
+                            <TabsList className="grid w-full grid-cols-5">
+                                <TabsTrigger value="overview">Overview</TabsTrigger>
+                                <TabsTrigger value="charts">Charts</TabsTrigger>
+                                <TabsTrigger value="analysis">Analysis</TabsTrigger>
+                                <TabsTrigger value="insights">Insights</TabsTrigger>
+                                <TabsTrigger value="data">Data</TabsTrigger>
+                            </TabsList>
+
+                            <TabsContent value="overview" className="space-y-6">
+                                <DashboardOverviewComponent date={selectedDate} />
+                            </TabsContent>
+
+                            <TabsContent value="charts" className="space-y-6">
+                                <HourlyChart
+                                    meteringPointId={selectedMeter}
+                                    date={selectedDate}
+                                    title={`Hourly Data - ${currentMeter?.name || 'Selected Meter'}`}
+                                />
+                            </TabsContent>
+
+                            <TabsContent value="analysis" className="space-y-6">
+                                <CostAnalysisComponent
+                                    meteringPointId={selectedMeter}
+                                    date={selectedDate}
+                                />
+                            </TabsContent>
+
+                            <TabsContent value="insights" className="space-y-6">
+                                <RealTimeInsightsComponent
+                                    meteringPointId={selectedMeter}
+                                    date={selectedDate}
+                                    autoRefresh={true}
+                                    refreshInterval={60000}
+                                />
+                            </TabsContent>
+
+                            <TabsContent value="data" className="space-y-6">
+                                <ElectricityDataTable
+                                    meteringPointId={selectedMeter}
+                                    date={selectedDate}
+                                    title={`Detailed Data - ${currentMeter?.name || 'Selected Meter'}`}
+                                />
+                            </TabsContent>
+                        </Tabs>
                     </div>
                 </div>
             </div>
-
-            <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-                <div className="mb-8">
-                    <h2 className="text-2xl font-semibold text-gray-900 mb-2">Welcome to your dashboard</h2>
-                    <p className="text-gray-600">
-                        Monitor your data processing tasks, analyze results, and manage your workflow from one central location.
-                    </p>
-                </div>
-
-                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Total Records</CardTitle>
-                            <Database className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">24,531</div>
-                            <p className="text-xs text-muted-foreground">+2.5% from last month</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Processing Jobs</CardTitle>
-                            <BarChart3 className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">147</div>
-                            <p className="text-xs text-muted-foreground">+12% from last week</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
-                            <Users className="h-4 w-4 text-muted-foreground" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">89</div>
-                            <p className="text-xs text-muted-foreground">+5.2% from yesterday</p>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                            <CardTitle className="text-sm font-medium">System Status</CardTitle>
-                            <div className="h-4 w-4 bg-green-500 rounded-full" />
-                        </CardHeader>
-                        <CardContent>
-                            <div className="text-2xl font-bold">Healthy</div>
-                            <p className="text-xs text-muted-foreground">All systems operational</p>
-                        </CardContent>
-                    </Card>
-                </div>
-
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Recent Activity</CardTitle>
-                            <CardDescription>Latest data processing activities</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="space-y-4">
-                                <div className="flex items-center space-x-4">
-                                    <div className="w-2 h-2 bg-blue-500 rounded-full"></div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">Data import completed</p>
-                                        <p className="text-xs text-gray-500">5 minutes ago</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center space-x-4">
-                                    <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">Analysis job finished</p>
-                                        <p className="text-xs text-gray-500">12 minutes ago</p>
-                                    </div>
-                                </div>
-                                <div className="flex items-center space-x-4">
-                                    <div className="w-2 h-2 bg-yellow-500 rounded-full"></div>
-                                    <div className="flex-1">
-                                        <p className="text-sm font-medium">Report generation started</p>
-                                        <p className="text-xs text-gray-500">25 minutes ago</p>
-                                    </div>
-                                </div>
-                            </div>
-                        </CardContent>
-                    </Card>
-
-                    <Card>
-                        <CardHeader>
-                            <CardTitle>Quick Actions</CardTitle>
-                            <CardDescription>Common tasks and shortcuts</CardDescription>
-                        </CardHeader>
-                        <CardContent>
-                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                <Button className="justify-start" variant="outline">
-                                    <Database className="w-4 h-4 mr-2" />
-                                    Import Data
-                                </Button>
-                                <Button className="justify-start" variant="outline">
-                                    <BarChart3 className="w-4 h-4 mr-2" />
-                                    Generate Report
-                                </Button>
-                                <Button className="justify-start" variant="outline">
-                                    <Users className="w-4 h-4 mr-2" />
-                                    Manage Users
-                                </Button>
-                                <Button className="justify-start" variant="outline">
-                                    <Settings className="w-4 h-4 mr-2" />
-                                    Configure API
-                                </Button>
-                            </div>
-                        </CardContent>
-                    </Card>
-                </div>
-            </div>
-        </div>
-    )
+        </Navigation>
+    );
 } 

@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getRealTimeInsightsAction } from '../../../../src/services/dashboard-service';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(
     request: NextRequest,
     { params }: { params: { meteringPointId: string } }

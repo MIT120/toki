@@ -1,33 +1,23 @@
 import { NextResponse } from 'next/server';
-import { getCustomerDataAction, getMeteringPointsAction } from '../../../src/services/metering-point-service';
+import { getMeteringPointsAction } from '../../../src/services/metering-point-service';
+
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
 
 export async function GET() {
     try {
-        const [meteringPointsResult, customerResult] = await Promise.all([
-            getMeteringPointsAction(),
-            getCustomerDataAction()
-        ]);
+        const result = await getMeteringPointsAction();
 
-        if (!meteringPointsResult.success) {
+        if (!result.success) {
             return NextResponse.json(
-                { error: meteringPointsResult.error },
-                { status: 400 }
-            );
-        }
-
-        if (!customerResult.success) {
-            return NextResponse.json(
-                { error: customerResult.error },
+                { error: result.error },
                 { status: 400 }
             );
         }
 
         return NextResponse.json({
             success: true,
-            data: {
-                customer: customerResult.data,
-                meteringPoints: meteringPointsResult.data
-            }
+            data: result.data
         });
     } catch (error) {
         console.error('Metering points API error:', error);

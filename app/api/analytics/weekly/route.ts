@@ -1,11 +1,14 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getWeeklySummaryAction } from '../../../../src/services/analytics-service';
 
+export const dynamic = 'force-dynamic';
+export const runtime = 'nodejs';
+
 export async function GET(request: NextRequest) {
     try {
         const { searchParams } = new URL(request.url);
         const meteringPointId = searchParams.get('meteringPointId');
-        const startDate = searchParams.get('startDate');
+        const weekStartDate = searchParams.get('weekStartDate');
 
         if (!meteringPointId) {
             return NextResponse.json(
@@ -14,14 +17,14 @@ export async function GET(request: NextRequest) {
             );
         }
 
-        if (!startDate) {
+        if (!weekStartDate) {
             return NextResponse.json(
-                { error: 'Start date parameter is required' },
+                { error: 'Week start date parameter is required' },
                 { status: 400 }
             );
         }
 
-        const result = await getWeeklySummaryAction(meteringPointId, startDate);
+        const result = await getWeeklySummaryAction(meteringPointId, weekStartDate);
 
         if (!result.success) {
             return NextResponse.json(

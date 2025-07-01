@@ -1,55 +1,49 @@
 import { Storage } from '@google-cloud/storage';
-import { DATA_CONFIG } from './config';
 
-let storage: Storage | null = null;
+const storage = new Storage();
+const bucketName = 'your-bucket-name'; // Replace with your actual bucket name
 
 export function getGCSClient(): Storage {
-    if (!storage) {
-        storage = new Storage({
-            keyFilename: DATA_CONFIG.GCS.keyFilename,
-            projectId: DATA_CONFIG.GCS.projectId
-        });
-    }
-
     return storage;
 }
 
 export function getBucket() {
-    const client = getGCSClient();
-    return client.bucket(DATA_CONFIG.GCS.bucketName);
+    return storage.bucket(bucketName);
 }
 
 export async function downloadFile(filePath: string): Promise<string> {
     try {
-        const bucket = getBucket();
+        const bucket = storage.bucket(bucketName);
         const file = bucket.file(filePath);
 
         const [exists] = await file.exists();
         if (!exists) {
-            throw new Error(`File not found: ${filePath}`);
+            console.warn(`File not found: ${filePath}`);
+            return ''; // Return empty string instead of throwing error
         }
 
         const [content] = await file.download();
         return content.toString('utf-8');
     } catch (error) {
-        throw new Error(`Failed to download file ${filePath}: ${error}`);
+        console.warn(`Failed to download file ${filePath}:`, error);
+        return ''; // Return empty string instead of throwing error
     }
 }
 
 export function parseJsonLines<T>(content: string): T[] {
-    const lines = content.trim().split('\n').filter(line => line.trim());
-    const results: T[] = [];
-
-    for (const line of lines) {
-        try {
-            const parsed = JSON.parse(line) as T;
-            results.push(parsed);
-        } catch (error) {
-            console.warn(`Failed to parse JSON line: ${line}`, error);
-        }
+    if (!content || content.trim() === '') {
+        return []; // Return empty array for missing data
     }
 
-    return results;
+    try {
+        return content
+            .split('\n')
+            .filter(line => line.trim())
+            .map(line => JSON.parse(line) as T);
+    } catch (error) {
+        console.warn('Failed to parse JSON Lines data:', error);
+        return []; // Return empty array for invalid data
+    }
 }
 
 export function formatDatePath(date: Date): { year: string; month: string; day: string } {
