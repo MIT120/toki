@@ -1,6 +1,6 @@
-import { Button } from '@/components/ui/button'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { BarChart3, Database, Settings, Users } from 'lucide-react'
+import { Button } from '../src/components/ui/button'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../src/components/ui/card'
 
 export default function Dashboard() {
     return (
