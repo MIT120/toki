@@ -68,7 +68,6 @@ function generateMockUsageData(meteringPointId: string, date: Date): UsageRecord
         const kwh = baseUsage * usageMultiplier * variance;
 
         mockData.push({
-            meteringPointId,
             timestamp: Math.floor(timestamp.getTime() / 1000),
             kwh: Math.round(kwh * 100) / 100 // Round to 2 decimals
         });
@@ -95,7 +94,8 @@ function generateMockPriceData(date: Date): PriceRecord[] {
 
         mockData.push({
             timestamp: Math.floor(timestamp.getTime() / 1000),
-            price: Math.round(price * 10000) / 10000 // Round to 4 decimals
+            price: Math.round(price * 10000) / 10000, // Round to 4 decimals
+            currency: 'BGN'
         });
     }
 

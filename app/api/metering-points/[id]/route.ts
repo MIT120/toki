@@ -9,7 +9,7 @@ export async function GET(
     { params }: { params: { id: string } }
 ) {
     try {
-        const meteringPointId = params.id;
+        const { id: meteringPointId } = await params;
 
         if (!meteringPointId) {
             return NextResponse.json(

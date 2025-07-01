@@ -43,9 +43,14 @@ export default function ElectricityDashboard() {
                             Monitor and optimize your bakery's energy consumption
                         </p>
                     </div>
-                    <Badge variant="outline" className="text-sm">
-                        Demo with Sample Data
-                    </Badge>
+                    <div className="flex flex-col gap-2">
+                        <Badge variant="secondary" className="text-sm">
+                            🔋 Demo Mode - Mock Data
+                        </Badge>
+                        <Badge variant="outline" className="text-xs">
+                            GCS Billing Disabled
+                        </Badge>
+                    </div>
                 </div>
 
                 <div className="grid gap-6 md:grid-cols-4">

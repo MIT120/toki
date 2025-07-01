@@ -9,7 +9,7 @@ export async function GET(
     { params }: { params: { meteringPointId: string } }
 ) {
     try {
-        const { meteringPointId } = params;
+        const { meteringPointId } = await params;
         const { searchParams } = new URL(request.url);
         const date = searchParams.get('date');
 
