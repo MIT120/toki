@@ -17,6 +17,8 @@
   },
   "homepage": "https://github.com/toki-power/take-home-data#readme",
   "dependencies": {
+    "firebase-admin": "^10.0.2",
+    "firebase-functions": "^3.18.0",
     "@ai-sdk/openai": "^1.3.22",
     "@ai-sdk/react": "^1.2.12",
     "@hookform/resolvers": "^5.1.1",
