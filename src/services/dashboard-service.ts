@@ -1,0 +1,307 @@
+"use server";
+
+import {
+    calculateCostAnalysis,
+    getMeteringPoints,
+    getPricesForDate,
+    getUsageForMeteringPointAndDate
+} from '../../data';
+import { MeteringPoint } from '../types';
+
+interface DashboardOverview {
+    customer: {
+        name: string;
+        owner: string;
+    };
+    meteringPoints: MeteringPoint[];
+    todayData: {
+        totalKwh: number;
+        totalCost: number;
+        averagePrice: number;
+        activeMeters: number;
+    };
+    recentInsights: string[];
+    quickStats: {
+        highestCostMeter: string;
+        peakUsageHour: number;
+        potentialSavingsToday: number;
+    };
+}
+
+interface HourlyData {
+    hour: number;
+    usage: number;
+    price: number;
+    cost: number;
+}
+
+interface RealTimeInsights {
+    meteringPointId: string;
+    currentHour: number;
+    currentUsage: number;
+    currentPrice: number;
+    currentCost: number;
+    recommendation: string;
+    urgencyLevel: 'low' | 'medium' | 'high';
+}
+
+export async function getDashboardOverviewAction(
+    dateString?: string
+): Promise<{ success: boolean; data?: DashboardOverview; error?: string }> {
+    try {
+        const targetDate = dateString ? new Date(dateString) : new Date();
+        if (isNaN(targetDate.getTime())) {
+            return { success: false, error: 'Invalid date format' };
+        }
+
+        const meteringPoints = await getMeteringPoints();
+
+        let totalKwh = 0;
+        let totalCost = 0;
+        let totalPriceSum = 0;
+        let activeMeters = 0;
+        let highestCostMeter = '';
+        let highestCost = 0;
+        let overallPeakHour = 0;
+        const insights: string[] = [];
+
+        for (const meter of meteringPoints) {
+            try {
+                const analysis = await calculateCostAnalysis(meter.id, targetDate);
+
+                if (analysis && analysis.totalKwh > 0) {
+                    totalKwh += analysis.totalKwh;
+                    totalCost += analysis.totalCost;
+                    totalPriceSum += analysis.averagePrice;
+                    activeMeters++;
+
+                    if (analysis.totalCost > highestCost) {
+                        highestCost = analysis.totalCost;
+                        highestCostMeter = meter.name || meter.id;
+                    }
+
+                    overallPeakHour = analysis.peakUsageHour;
+
+                    if (analysis.suggestions.length > 0) {
+                        insights.push(`${meter.name}: ${analysis.suggestions[0]}`);
+                    }
+                }
+            } catch (error) {
+                console.warn(`Failed to get data for meter ${meter.id}:`, error);
+            }
+        }
+
+        const averagePrice = activeMeters > 0 ? totalPriceSum / activeMeters : 0;
+        const potentialSavingsToday = totalKwh * averagePrice * 0.1;
+
+        const overview: DashboardOverview = {
+            customer: {
+                name: "My Amazing Bakery EOOD",
+                owner: "Strahil"
+            },
+            meteringPoints,
+            todayData: {
+                totalKwh,
+                totalCost,
+                averagePrice,
+                activeMeters
+            },
+            recentInsights: insights.slice(0, 5),
+            quickStats: {
+                highestCostMeter,
+                peakUsageHour: overallPeakHour,
+                potentialSavingsToday
+            }
+        };
+
+        return { success: true, data: overview };
+    } catch (error) {
+        console.error('Error in getDashboardOverviewAction:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to generate dashboard overview'
+        };
+    }
+}
+
+export async function getHourlyDataAction(
+    meteringPointId: string,
+    dateString: string
+): Promise<{ success: boolean; data?: HourlyData[]; error?: string }> {
+    try {
+        if (!meteringPointId || !dateString) {
+            return { success: false, error: 'Metering point ID and date are required' };
+        }
+
+        const date = new Date(dateString);
+        if (isNaN(date.getTime())) {
+            return { success: false, error: 'Invalid date format' };
+        }
+
+        const [usage, prices] = await Promise.all([
+            getUsageForMeteringPointAndDate(meteringPointId, date),
+            getPricesForDate(date)
+        ]);
+
+        const hourlyMap = new Map<number, HourlyData>();
+
+        for (let hour = 0; hour < 24; hour++) {
+            hourlyMap.set(hour, {
+                hour,
+                usage: 0,
+                price: 0,
+                cost: 0
+            });
+        }
+
+        for (const usageRecord of usage) {
+            const hour = new Date(usageRecord.timestamp * 1000).getHours();
+            const existing = hourlyMap.get(hour);
+            if (existing) {
+                existing.usage += usageRecord.kwh;
+            }
+        }
+
+        for (const priceRecord of prices) {
+            const hour = new Date(priceRecord.timestamp * 1000).getHours();
+            const existing = hourlyMap.get(hour);
+            if (existing) {
+                existing.price = priceRecord.price;
+            }
+        }
+
+        for (const [hour, data] of hourlyMap) {
+            data.cost = data.usage * data.price;
+        }
+
+        const hourlyData = Array.from(hourlyMap.values()).sort((a, b) => a.hour - b.hour);
+
+        return { success: true, data: hourlyData };
+    } catch (error) {
+        console.error('Error in getHourlyDataAction:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to get hourly data'
+        };
+    }
+}
+
+export async function getRealTimeInsightsAction(
+    meteringPointId: string,
+    dateString?: string
+): Promise<{ success: boolean; data?: RealTimeInsights; error?: string }> {
+    try {
+        if (!meteringPointId) {
+            return { success: false, error: 'Metering point ID is required' };
+        }
+
+        const targetDate = dateString ? new Date(dateString) : new Date();
+        if (isNaN(targetDate.getTime())) {
+            return { success: false, error: 'Invalid date format' };
+        }
+
+        const currentHour = targetDate.getHours();
+
+        const [usage, prices] = await Promise.all([
+            getUsageForMeteringPointAndDate(meteringPointId, targetDate),
+            getPricesForDate(targetDate)
+        ]);
+
+        const currentUsageRecords = usage.filter(u =>
+            new Date(u.timestamp * 1000).getHours() === currentHour
+        );
+
+        const currentPriceRecord = prices.find(p =>
+            new Date(p.timestamp * 1000).getHours() === currentHour
+        );
+
+        const currentUsage = currentUsageRecords.reduce((sum, u) => sum + u.kwh, 0);
+        const currentPrice = currentPriceRecord?.price || 0;
+        const currentCost = currentUsage * currentPrice;
+
+        const { recommendation, urgencyLevel } = generateRealTimeRecommendation(
+            currentHour,
+            currentUsage,
+            currentPrice,
+            prices,
+            usage
+        );
+
+        const insights: RealTimeInsights = {
+            meteringPointId,
+            currentHour,
+            currentUsage,
+            currentPrice,
+            currentCost,
+            recommendation,
+            urgencyLevel
+        };
+
+        return { success: true, data: insights };
+    } catch (error) {
+        console.error('Error in getRealTimeInsightsAction:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Failed to get real-time insights'
+        };
+    }
+}
+
+function generateRealTimeRecommendation(
+    currentHour: number,
+    currentUsage: number,
+    currentPrice: number,
+    prices: any[],
+    usage: any[]
+): { recommendation: string; urgencyLevel: 'low' | 'medium' | 'high' } {
+    const avgPrice = prices.reduce((sum, p) => sum + p.price, 0) / prices.length;
+    const avgUsage = usage.reduce((sum, u) => sum + u.kwh, 0) / usage.length;
+
+    const priceThresholdHigh = avgPrice * 1.2;
+    const priceThresholdLow = avgPrice * 0.8;
+    const usageThresholdHigh = avgUsage * 1.5;
+
+    if (currentPrice > priceThresholdHigh && currentUsage > usageThresholdHigh) {
+        return {
+            recommendation: `HIGH ALERT: Both price (${currentPrice.toFixed(4)} BGN/kWh) and usage (${currentUsage.toFixed(1)} kWh) are very high right now. Consider postponing non-essential baking activities.`,
+            urgencyLevel: 'high'
+        };
+    }
+
+    if (currentPrice > priceThresholdHigh) {
+        return {
+            recommendation: `Price is high right now (${currentPrice.toFixed(4)} BGN/kWh). Consider reducing usage or postponing energy-intensive activities to the next hour.`,
+            urgencyLevel: 'medium'
+        };
+    }
+
+    if (currentUsage > usageThresholdHigh) {
+        return {
+            recommendation: `Usage is high this hour (${currentUsage.toFixed(1)} kWh). Monitor equipment to ensure efficient operation.`,
+            urgencyLevel: 'medium'
+        };
+    }
+
+    if (currentPrice < priceThresholdLow) {
+        return {
+            recommendation: `Great time to operate! Price is low (${currentPrice.toFixed(4)} BGN/kWh). Consider running energy-intensive equipment now.`,
+            urgencyLevel: 'low'
+        };
+    }
+
+    const nextHourPrice = prices.find(p =>
+        new Date(p.timestamp * 1000).getHours() === (currentHour + 1) % 24
+    );
+
+    if (nextHourPrice && nextHourPrice.price < currentPrice * 0.9) {
+        return {
+            recommendation: `Price will drop significantly next hour (${nextHourPrice.price.toFixed(4)} BGN/kWh). Consider waiting for non-urgent activities.`,
+            urgencyLevel: 'low'
+        };
+    }
+
+    return {
+        recommendation: `Normal operations. Current price: ${currentPrice.toFixed(4)} BGN/kWh, usage: ${currentUsage.toFixed(1)} kWh.`,
+        urgencyLevel: 'low'
+    };
+} 
