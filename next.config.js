@@ -5,9 +5,6 @@ const nextConfig = {
     images: {
         unoptimized: true
     },
-    experimental: {
-        esmExternals: 'loose'
-    },
     async rewrites() {
         return [
             {

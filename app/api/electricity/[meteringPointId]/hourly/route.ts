@@ -6,7 +6,7 @@ export const runtime = 'nodejs';
 
 export async function GET(
     request: NextRequest,
-    { params }: { params: { meteringPointId: string } }
+    { params }: { params: Promise<{ meteringPointId: string }> }
 ) {
     try {
         const { meteringPointId } = await params;

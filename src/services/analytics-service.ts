@@ -298,4 +298,86 @@ export async function shutdownAnalyticsAction(): Promise<{ success: boolean; err
             error: error instanceof Error ? error.message : 'Unknown error'
         };
     }
+}
+
+// Analytics Summary Actions
+export async function getDailySummaryAction(
+    meteringPointId: string,
+    date: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+        // This would typically fetch from your database or analytics service
+        // For now, returning mock data structure
+        const mockData = {
+            meteringPointId,
+            date,
+            totalConsumption: 0,
+            totalCost: 0,
+            peakUsageHour: 0,
+            averageUsage: 0,
+            events: []
+        };
+
+        return { success: true, data: mockData };
+    } catch (error) {
+        console.error('Failed to get daily summary:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
+export async function getWeeklySummaryAction(
+    meteringPointId: string,
+    weekStartDate: string
+): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+        // This would typically fetch from your database or analytics service
+        // For now, returning mock data structure
+        const mockData = {
+            meteringPointId,
+            weekStartDate,
+            totalConsumption: 0,
+            totalCost: 0,
+            dailyBreakdown: [],
+            trends: {}
+        };
+
+        return { success: true, data: mockData };
+    } catch (error) {
+        console.error('Failed to get weekly summary:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
+export async function getMonthlySummaryAction(
+    meteringPointId: string,
+    month: number,
+    year: number
+): Promise<{ success: boolean; data?: any; error?: string }> {
+    try {
+        // This would typically fetch from your database or analytics service
+        // For now, returning mock data structure
+        const mockData = {
+            meteringPointId,
+            month,
+            year,
+            totalConsumption: 0,
+            totalCost: 0,
+            weeklyBreakdown: [],
+            monthlyTrends: {}
+        };
+
+        return { success: true, data: mockData };
+    } catch (error) {
+        console.error('Failed to get monthly summary:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
 } 
