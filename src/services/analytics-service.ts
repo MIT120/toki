@@ -1,289 +1,301 @@
 "use server";
 
+import { PostHog } from 'posthog-node';
 import {
-    calculateCostAnalysis,
-    getElectricityDataForDateRange,
-    validateMeteringPointAccess
-} from '../../data';
+    AnalyticsEventProperties,
+    AnalyticsUser,
+    DashboardEventType
+} from '../types';
 
-interface DailySummary {
-    date: string;
-    totalKwh: number;
-    totalCost: number;
-    averagePrice: number;
-    peakUsageHour: number;
-    suggestions: string[];
+// Server-side PostHog client
+let posthogServer: PostHog | null = null;
+
+function getPostHogServer(): PostHog {
+    if (!posthogServer) {
+        if (!process.env.POSTHOG_API_KEY) {
+            throw new Error('POSTHOG_API_KEY environment variable is required');
+        }
+
+        posthogServer = new PostHog(process.env.POSTHOG_API_KEY, {
+            host: 'https://us.i.posthog.com',
+            flushAt: 20,
+            flushInterval: 10000,
+        });
+    }
+    return posthogServer;
 }
 
-interface WeeklySummary {
-    weekStartDate: string;
-    weekEndDate: string;
-    totalKwh: number;
-    totalCost: number;
-    averagePrice: number;
-    dailySummaries: DailySummary[];
-    weeklyInsights: string[];
-}
-
-interface MonthlySummary {
-    month: string;
-    year: number;
-    totalKwh: number;
-    totalCost: number;
-    averagePrice: number;
-    costSavingsOpportunity: number;
-    monthlySuggestions: string[];
-}
-
-export async function getDailySummaryAction(
-    meteringPointId: string,
-    dateString: string
-): Promise<{ success: boolean; data?: DailySummary; error?: string }> {
+// Server Actions for Analytics
+export async function trackEventAction(
+    event: DashboardEventType | string,
+    properties?: AnalyticsEventProperties,
+    userId?: string
+): Promise<{ success: boolean; error?: string }> {
     try {
-        if (!meteringPointId || !dateString) {
-            return { success: false, error: 'Metering point ID and date are required' };
-        }
+        const posthog = getPostHogServer();
 
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            return { success: false, error: 'Invalid date format' };
-        }
-
-        const hasAccess = await validateMeteringPointAccess(meteringPointId);
-        if (!hasAccess) {
-            return { success: false, error: 'Access denied for this metering point' };
-        }
-
-        const analysis = await calculateCostAnalysis(meteringPointId, date);
-
-        if (!analysis) {
-            return { success: false, error: 'Unable to generate daily summary - insufficient data' };
-        }
-
-        const summary: DailySummary = {
-            date: analysis.date,
-            totalKwh: analysis.totalKwh,
-            totalCost: analysis.totalCost,
-            averagePrice: analysis.averagePrice,
-            peakUsageHour: analysis.peakUsageHour,
-            suggestions: analysis.suggestions
+        const eventProperties = {
+            ...properties,
+            timestamp: new Date().toISOString(),
+            source: 'dashboard',
+            environment: process.env.NODE_ENV || 'development',
         };
 
-        return { success: true, data: summary };
+        await posthog.capture({
+            distinctId: userId || 'anonymous',
+            event,
+            properties: eventProperties,
+        });
+
+        return { success: true };
     } catch (error) {
-        console.error('Error in getDailySummaryAction:', error);
+        console.error('Failed to track event:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to generate daily summary'
+            error: error instanceof Error ? error.message : 'Unknown error'
         };
     }
 }
 
-export async function getWeeklySummaryAction(
-    meteringPointId: string,
-    startDateString: string
-): Promise<{ success: boolean; data?: WeeklySummary; error?: string }> {
+export async function identifyUserAction(
+    userId: string,
+    userProperties: AnalyticsUser
+): Promise<{ success: boolean; error?: string }> {
     try {
-        if (!meteringPointId || !startDateString) {
-            return { success: false, error: 'Metering point ID and start date are required' };
-        }
+        const posthog = getPostHogServer();
 
-        const startDate = new Date(startDateString);
-        if (isNaN(startDate.getTime())) {
-            return { success: false, error: 'Invalid date format' };
-        }
+        await posthog.identify({
+            distinctId: userId,
+            properties: {
+                ...userProperties,
+                last_seen: new Date().toISOString(),
+            },
+        });
 
-        const endDate = new Date(startDate);
-        endDate.setDate(endDate.getDate() + 6);
-
-        const hasAccess = await validateMeteringPointAccess(meteringPointId);
-        if (!hasAccess) {
-            return { success: false, error: 'Access denied for this metering point' };
-        }
-
-        const dailySummaries: DailySummary[] = [];
-        let totalWeeklyKwh = 0;
-        let totalWeeklyCost = 0;
-        let totalPriceSum = 0;
-        let validDays = 0;
-
-        const currentDate = new Date(startDate);
-        while (currentDate <= endDate) {
-            const analysis = await calculateCostAnalysis(meteringPointId, new Date(currentDate));
-
-            if (analysis) {
-                const dailySummary: DailySummary = {
-                    date: analysis.date,
-                    totalKwh: analysis.totalKwh,
-                    totalCost: analysis.totalCost,
-                    averagePrice: analysis.averagePrice,
-                    peakUsageHour: analysis.peakUsageHour,
-                    suggestions: analysis.suggestions.slice(0, 2)
-                };
-
-                dailySummaries.push(dailySummary);
-                totalWeeklyKwh += analysis.totalKwh;
-                totalWeeklyCost += analysis.totalCost;
-                totalPriceSum += analysis.averagePrice;
-                validDays++;
-            }
-
-            currentDate.setDate(currentDate.getDate() + 1);
-        }
-
-        if (validDays === 0) {
-            return { success: false, error: 'No data available for the specified week' };
-        }
-
-        const averageWeeklyPrice = totalPriceSum / validDays;
-        const weeklyInsights = generateWeeklyInsights(dailySummaries, totalWeeklyKwh, totalWeeklyCost);
-
-        const summary: WeeklySummary = {
-            weekStartDate: startDate.toISOString().split('T')[0],
-            weekEndDate: endDate.toISOString().split('T')[0],
-            totalKwh: totalWeeklyKwh,
-            totalCost: totalWeeklyCost,
-            averagePrice: averageWeeklyPrice,
-            dailySummaries,
-            weeklyInsights
-        };
-
-        return { success: true, data: summary };
+        return { success: true };
     } catch (error) {
-        console.error('Error in getWeeklySummaryAction:', error);
+        console.error('Failed to identify user:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to generate weekly summary'
+            error: error instanceof Error ? error.message : 'Unknown error'
         };
     }
 }
 
-export async function getMonthlySummaryAction(
-    meteringPointId: string,
-    month: number,
-    year: number
-): Promise<{ success: boolean; data?: MonthlySummary; error?: string }> {
+export async function trackPageViewAction(
+    userId: string,
+    pagePath: string,
+    properties?: AnalyticsEventProperties
+): Promise<{ success: boolean; error?: string }> {
     try {
-        if (!meteringPointId || !month || !year) {
-            return { success: false, error: 'Metering point ID, month, and year are required' };
-        }
-
-        if (month < 1 || month > 12) {
-            return { success: false, error: 'Month must be between 1 and 12' };
-        }
-
-        if (year < 2020 || year > new Date().getFullYear()) {
-            return { success: false, error: 'Invalid year' };
-        }
-
-        const hasAccess = await validateMeteringPointAccess(meteringPointId);
-        if (!hasAccess) {
-            return { success: false, error: 'Access denied for this metering point' };
-        }
-
-        const startDate = new Date(year, month - 1, 1);
-        const endDate = new Date(year, month, 0);
-
-        const data = await getElectricityDataForDateRange(meteringPointId, startDate, endDate);
-
-        if (!data || data.length === 0) {
-            return { success: false, error: 'No data available for the specified month' };
-        }
-
-        let totalKwh = 0;
-        let totalCost = 0;
-        let totalPriceSum = 0;
-        let validDays = 0;
-
-        for (const dayData of data) {
-            const analysis = await calculateCostAnalysis(meteringPointId, new Date(dayData.date));
-            if (analysis) {
-                totalKwh += analysis.totalKwh;
-                totalCost += analysis.totalCost;
-                totalPriceSum += analysis.averagePrice;
-                validDays++;
-            }
-        }
-
-        if (validDays === 0) {
-            return { success: false, error: 'Unable to calculate monthly summary - insufficient data' };
-        }
-
-        const averagePrice = totalPriceSum / validDays;
-        const costSavingsOpportunity = calculateCostSavingsOpportunity(totalKwh, averagePrice);
-        const monthlySuggestions = generateMonthlySuggestions(totalKwh, totalCost, averagePrice, validDays);
-
-        const summary: MonthlySummary = {
-            month: new Date(year, month - 1).toLocaleDateString('en-US', { month: 'long' }),
-            year,
-            totalKwh,
-            totalCost,
-            averagePrice,
-            costSavingsOpportunity,
-            monthlySuggestions
-        };
-
-        return { success: true, data: summary };
+        return await trackEventAction(
+            '$pageview',
+            {
+                ...properties,
+                page_path: pagePath,
+                $current_url: pagePath,
+            },
+            userId
+        );
     } catch (error) {
-        console.error('Error in getMonthlySummaryAction:', error);
+        console.error('Failed to track page view:', error);
         return {
             success: false,
-            error: error instanceof Error ? error.message : 'Failed to generate monthly summary'
+            error: error instanceof Error ? error.message : 'Unknown error'
         };
     }
 }
 
-function generateWeeklyInsights(dailySummaries: DailySummary[], totalKwh: number, totalCost: number): string[] {
-    const insights: string[] = [];
-
-    if (dailySummaries.length === 0) return insights;
-
-    const avgDailyKwh = totalKwh / dailySummaries.length;
-    const avgDailyCost = totalCost / dailySummaries.length;
-
-    const highestUsageDay = dailySummaries.reduce((max, day) =>
-        day.totalKwh > max.totalKwh ? day : max
+export async function trackDashboardViewAction(
+    userId: string,
+    properties: {
+        meteringPointsCount: number;
+        totalConsumption: number;
+        totalCost: number;
+        loadTime?: number;
+        date?: string;
+    }
+): Promise<{ success: boolean; error?: string }> {
+    return await trackEventAction(
+        'dashboard_viewed',
+        {
+            metering_points_count: properties.meteringPointsCount,
+            total_consumption: properties.totalConsumption,
+            total_cost: properties.totalCost,
+            dashboard_load_time: properties.loadTime,
+            dashboard_date: properties.date,
+        },
+        userId
     );
+}
 
-    const lowestUsageDay = dailySummaries.reduce((min, day) =>
-        day.totalKwh < min.totalKwh ? day : min
+export async function trackMeteringPointInteractionAction(
+    userId: string,
+    meteringPointId: string,
+    meteringPointName: string,
+    actionType: 'view' | 'select' | 'analyze',
+    properties?: AnalyticsEventProperties
+): Promise<{ success: boolean; error?: string }> {
+    return await trackEventAction(
+        'metering_point_selected',
+        {
+            metering_point_id: meteringPointId,
+            metering_point_name: meteringPointName,
+            action_type: actionType,
+            ...properties,
+        },
+        userId
     );
-
-    insights.push(`Average daily consumption: ${avgDailyKwh.toFixed(1)} kWh (${avgDailyCost.toFixed(2)} BGN)`);
-    insights.push(`Highest usage: ${highestUsageDay.totalKwh.toFixed(1)} kWh on ${new Date(highestUsageDay.date).toLocaleDateString()}`);
-    insights.push(`Lowest usage: ${lowestUsageDay.totalKwh.toFixed(1)} kWh on ${new Date(lowestUsageDay.date).toLocaleDateString()}`);
-
-    const usageVariation = ((highestUsageDay.totalKwh - lowestUsageDay.totalKwh) / avgDailyKwh) * 100;
-    if (usageVariation > 50) {
-        insights.push(`High usage variation detected (${usageVariation.toFixed(0)}%). Consider stabilizing your baking schedule.`);
-    }
-
-    return insights;
 }
 
-function calculateCostSavingsOpportunity(totalKwh: number, averagePrice: number): number {
-    const potentialSavingsPercentage = 0.15;
-    return totalKwh * averagePrice * potentialSavingsPercentage;
+export async function trackCostAnalysisAction(
+    userId: string,
+    meteringPointId: string,
+    analysisData: {
+        totalKwh: number;
+        totalCost: number;
+        averagePrice: number;
+        peakUsageHour: number;
+        potentialSavings?: number;
+    }
+): Promise<{ success: boolean; error?: string }> {
+    return await trackEventAction(
+        'cost_analysis_viewed',
+        {
+            metering_point_id: meteringPointId,
+            total_consumption: analysisData.totalKwh,
+            total_cost: analysisData.totalCost,
+            peak_usage_hour: analysisData.peakUsageHour,
+            cost_savings_identified: analysisData.potentialSavings,
+        },
+        userId
+    );
 }
 
-function generateMonthlySuggestions(totalKwh: number, totalCost: number, averagePrice: number, validDays: number): string[] {
-    const suggestions: string[] = [];
+export async function trackInsightViewAction(
+    userId: string,
+    insightType: string,
+    urgencyLevel: 'low' | 'medium' | 'high',
+    potentialSavings?: number
+): Promise<{ success: boolean; error?: string }> {
+    return await trackEventAction(
+        'insights_viewed',
+        {
+            insight_type: insightType,
+            insight_urgency: urgencyLevel,
+            potential_savings: potentialSavings,
+        },
+        userId
+    );
+}
 
-    const dailyAvgKwh = totalKwh / validDays;
-    const dailyAvgCost = totalCost / validDays;
-
-    if (dailyAvgKwh > 60) {
-        suggestions.push(`High monthly consumption detected (${totalKwh.toFixed(0)} kWh). Consider energy-efficient ovens and equipment.`);
+export async function trackErrorAction(
+    userId: string,
+    error: Error,
+    context?: {
+        component?: string;
+        apiEndpoint?: string;
+        userAction?: string;
     }
+): Promise<{ success: boolean; error?: string }> {
+    return await trackEventAction(
+        'error_occurred',
+        {
+            error_message: error.message,
+            error_stack: error.stack,
+            component_name: context?.component,
+            api_endpoint: context?.apiEndpoint,
+            action_type: context?.userAction as any,
+        },
+        userId
+    );
+}
 
-    if (averagePrice > 0.25) {
-        suggestions.push(`Electricity prices are high this month (avg. ${averagePrice.toFixed(4)} BGN/kWh). Focus on off-peak baking hours.`);
+export async function trackPerformanceAction(
+    userId: string,
+    performanceData: {
+        componentName: string;
+        loadTime: number;
+        apiEndpoint?: string;
+        dataPointsCount?: number;
     }
+): Promise<{ success: boolean; error?: string }> {
+    return await trackEventAction(
+        'performance_measured',
+        {
+            component_name: performanceData.componentName,
+            load_time: performanceData.loadTime,
+            api_endpoint: performanceData.apiEndpoint,
+            data_points_count: performanceData.dataPointsCount,
+        },
+        userId
+    );
+}
 
-    const potentialMonthlySavings = calculateCostSavingsOpportunity(totalKwh, averagePrice);
-    suggestions.push(`Potential monthly savings: ${potentialMonthlySavings.toFixed(2)} BGN through optimized scheduling and equipment upgrades.`);
+export async function trackFilterApplicationAction(
+    userId: string,
+    filterType: string,
+    filterValue: string,
+    componentName: string
+): Promise<{ success: boolean; error?: string }> {
+    return await trackEventAction(
+        'filter_applied',
+        {
+            filter_applied: `${filterType}:${filterValue}`,
+            component_name: componentName,
+            action_type: 'filter',
+        },
+        userId
+    );
+}
 
-    suggestions.push(`Consider installing smart meters and timers to automate equipment during low-price periods.`);
+export async function trackDataExportAction(
+    userId: string,
+    exportType: string,
+    dataRange: string,
+    recordCount: number
+): Promise<{ success: boolean; error?: string }> {
+    return await trackEventAction(
+        'data_exported',
+        {
+            action_type: 'export',
+            analysis_type: exportType as any,
+            date_range: dataRange,
+            data_points_count: recordCount,
+        },
+        userId
+    );
+}
 
-    return suggestions;
+// Utility function to flush events (useful for testing or before app shutdown)
+export async function flushAnalyticsAction(): Promise<{ success: boolean; error?: string }> {
+    try {
+        if (posthogServer) {
+            await posthogServer.flush();
+        }
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to flush analytics:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
+}
+
+// Shutdown function to properly close PostHog connection
+export async function shutdownAnalyticsAction(): Promise<{ success: boolean; error?: string }> {
+    try {
+        if (posthogServer) {
+            await posthogServer.shutdown();
+            posthogServer = null;
+        }
+        return { success: true };
+    } catch (error) {
+        console.error('Failed to shutdown analytics:', error);
+        return {
+            success: false,
+            error: error instanceof Error ? error.message : 'Unknown error'
+        };
+    }
 } 
