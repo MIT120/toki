@@ -11,6 +11,7 @@ import {
     Zap
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useIsHydrated } from '../../hooks/use-hydration-safe';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -23,6 +24,7 @@ interface NavigationProps {
 export default function Navigation({ children }: NavigationProps) {
     const [notifications, setNotifications] = useState(3);
     const [currentTime, setCurrentTime] = useState<string>('');
+    const isHydrated = useIsHydrated();
 
     useEffect(() => {
         const updateTime = () => {
@@ -152,7 +154,7 @@ export default function Navigation({ children }: NavigationProps) {
                         </div>
 
                         <div className="flex items-center space-x-2 text-xs text-muted-foreground">
-                            {currentTime && (
+                            {isHydrated && currentTime && (
                                 <span>Last updated: {currentTime}</span>
                             )}
                         </div>

@@ -10,10 +10,10 @@ import {
     TrendingUp,
     Zap
 } from 'lucide-react';
-import { useEffect, useState } from 'react';
-import { CostAnalysis } from '../../types';
+import { useCostAnalysisQuery } from '../../hooks/use-cost-analysis-query';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Progress } from '../ui/progress';
 import { Separator } from '../ui/separator';
@@ -24,36 +24,21 @@ interface CostAnalysisProps {
 }
 
 export default function CostAnalysisComponent({ meteringPointId, date }: CostAnalysisProps) {
-    const [costData, setCostData] = useState<CostAnalysis | null>(null);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const {
+        data: costData,
+        isLoading,
+        isError,
+        error,
+        refetch,
+        isFetching,
+        isRefetching
+    } = useCostAnalysisQuery(meteringPointId, date, {
+        enabled: !!meteringPointId && !!date,
+        enableAnalytics: true,
+        staleTime: 1000 * 60 * 5, // 5 minutes
+    });
 
-    useEffect(() => {
-        if (meteringPointId && date) {
-            fetchCostAnalysis();
-        }
-    }, [meteringPointId, date]);
-
-    const fetchCostAnalysis = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch(`/api/electricity/${meteringPointId}/analysis?date=${date}`);
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to fetch cost analysis');
-            }
-
-            setCostData(data.data);
-            setError(null);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
-
-    const getEfficiencyScore = (costData: CostAnalysis) => {
+    const getEfficiencyScore = (costData: any) => {
         const baseScore = 60;
         const usageBonus = Math.max(0, 20 - (costData.totalKwh / 10));
         const priceBonus = Math.max(0, 20 - (costData.averagePrice * 100));
@@ -80,19 +65,19 @@ export default function CostAnalysisComponent({ meteringPointId, date }: CostAna
         return "outline";
     };
 
-    if (loading) {
+    if (isLoading) {
         return (
             <div className="space-y-4">
                 <Card>
                     <CardHeader>
-                        <div className="h-6 bg-muted rounded w-1/3"></div>
-                        <div className="h-4 bg-muted rounded w-2/3"></div>
+                        <div className="h-6 bg-muted rounded w-1/3 animate-pulse"></div>
+                        <div className="h-4 bg-muted rounded w-2/3 animate-pulse"></div>
                     </CardHeader>
                     <CardContent>
                         <div className="space-y-4">
-                            <div className="h-8 bg-muted rounded"></div>
-                            <div className="h-4 bg-muted rounded"></div>
-                            <div className="h-4 bg-muted rounded w-3/4"></div>
+                            <div className="h-8 bg-muted rounded animate-pulse"></div>
+                            <div className="h-4 bg-muted rounded animate-pulse"></div>
+                            <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
                         </div>
                     </CardContent>
                 </Card>
@@ -100,12 +85,25 @@ export default function CostAnalysisComponent({ meteringPointId, date }: CostAna
         );
     }
 
-    if (error) {
+    if (isError) {
+        const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         return (
             <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertTitle>Error</AlertTitle>
-                <AlertDescription>{error}</AlertDescription>
+                <AlertDescription>
+                    {errorMessage}
+                    <div className="mt-2">
+                        <Button
+                            onClick={() => refetch()}
+                            disabled={isRefetching}
+                            variant="outline"
+                            size="sm"
+                        >
+                            {isRefetching ? 'Retrying...' : 'Try Again'}
+                        </Button>
+                    </div>
+                </AlertDescription>
             </Alert>
         );
     }
@@ -117,6 +115,16 @@ export default function CostAnalysisComponent({ meteringPointId, date }: CostAna
                 <AlertTitle>No Data</AlertTitle>
                 <AlertDescription>
                     No cost analysis data available for {new Date(date).toLocaleDateString()}
+                    <div className="mt-2">
+                        <Button
+                            onClick={() => refetch()}
+                            disabled={isFetching}
+                            variant="outline"
+                            size="sm"
+                        >
+                            {isFetching ? 'Refreshing...' : 'Refresh'}
+                        </Button>
+                    </div>
                 </AlertDescription>
             </Alert>
         );
@@ -127,6 +135,27 @@ export default function CostAnalysisComponent({ meteringPointId, date }: CostAna
 
     return (
         <div className="space-y-6">
+            {/* Header with refresh indicator */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="text-lg font-semibold">Cost Analysis</h3>
+                    {(isFetching || isRefetching) && (
+                        <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-muted-foreground border-t-transparent mr-2" />
+                            {isRefetching ? 'Refreshing...' : 'Loading...'}
+                        </div>
+                    )}
+                </div>
+                <Button
+                    onClick={() => refetch()}
+                    disabled={isRefetching}
+                    variant="outline"
+                    size="sm"
+                >
+                    {isRefetching ? 'Refreshing...' : 'Refresh'}
+                </Button>
+            </div>
+
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardContent className="flex items-center justify-between p-6">
@@ -200,23 +229,16 @@ export default function CostAnalysisComponent({ meteringPointId, date }: CostAna
 
                         <Separator />
 
-                        <div className="space-y-3">
-                            <div className="flex justify-between text-sm">
-                                <span>Cost per kWh</span>
-                                <span>{costData.averagePrice.toFixed(4)} BGN</span>
+                        <div className="space-y-2">
+                            <div className="flex justify-between items-center">
+                                <span className="text-sm font-medium">Potential Savings</span>
+                                <span className="text-sm font-bold text-green-600">
+                                    {potentialSavings.toFixed(2)} BGN
+                                </span>
                             </div>
-                            <div className="flex justify-between text-sm">
-                                <span>Peak Usage Hour</span>
-                                <span>{costData.peakUsageHour}:00</span>
-                            </div>
-                            <div className="flex justify-between text-sm">
-                                <span>Peak Cost Hour</span>
-                                <span>{costData.peakCostHour}:00</span>
-                            </div>
-                            <div className="flex justify-between text-sm font-medium">
-                                <span>Potential Savings</span>
-                                <span className="text-green-600">{potentialSavings.toFixed(2)} BGN</span>
-                            </div>
+                            <p className="text-xs text-muted-foreground">
+                                Estimated monthly savings through optimization
+                            </p>
                         </div>
                     </CardContent>
                 </Card>
@@ -228,26 +250,34 @@ export default function CostAnalysisComponent({ meteringPointId, date }: CostAna
                             Smart Recommendations
                         </CardTitle>
                         <CardDescription>
-                            AI-powered suggestions to optimize your electricity costs
+                            AI-powered suggestions to reduce your energy costs
                         </CardDescription>
                     </CardHeader>
-                    <CardContent className="space-y-4">
-                        {costData.suggestions.length > 0 ? (
+                    <CardContent className="space-y-3">
+                        {costData.suggestions && costData.suggestions.length > 0 ? (
                             costData.suggestions.map((suggestion, index) => (
-                                <Alert key={index} variant={getSuggestionVariant(suggestion) === "destructive" ? "destructive" : "default"}>
+                                <div
+                                    key={index}
+                                    className="flex items-start gap-3 p-3 rounded-lg border bg-muted/50 hover:bg-muted/70 transition-colors"
+                                >
                                     {getSuggestionIcon(suggestion)}
-                                    <AlertDescription className="text-sm pl-6">
-                                        {suggestion}
-                                    </AlertDescription>
-                                </Alert>
+                                    <div className="flex-1 space-y-1">
+                                        <p className="text-sm">{suggestion}</p>
+                                        <Badge variant={getSuggestionVariant(suggestion)} className="text-xs">
+                                            {suggestion.toLowerCase().includes('high') ? 'High Priority' :
+                                                suggestion.toLowerCase().includes('consider') ? 'Medium Priority' :
+                                                    'Low Priority'}
+                                        </Badge>
+                                    </div>
+                                </div>
                             ))
                         ) : (
-                            <Alert>
-                                <CheckCircle className="h-4 w-4" />
-                                <AlertDescription>
-                                    No specific recommendations for today. Your energy usage patterns look optimal!
-                                </AlertDescription>
-                            </Alert>
+                            <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
+                                <CheckCircle className="h-4 w-4 text-green-500" />
+                                <p className="text-sm text-muted-foreground">
+                                    Your energy usage is optimized! No specific recommendations at this time.
+                                </p>
+                            </div>
                         )}
                     </CardContent>
                 </Card>
@@ -255,65 +285,27 @@ export default function CostAnalysisComponent({ meteringPointId, date }: CostAna
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Daily Summary</CardTitle>
+                    <CardTitle>Cost Breakdown Analysis</CardTitle>
                     <CardDescription>
-                        Complete breakdown for {new Date(date).toLocaleDateString()}
+                        Detailed analysis of your energy costs and usage patterns
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <div className="grid gap-6 md:grid-cols-3">
-                        <div className="space-y-2">
-                            <h4 className="font-semibold text-sm">Usage Analysis</h4>
-                            <div className="space-y-1 text-sm">
-                                <div className="flex justify-between">
-                                    <span>Total Consumption:</span>
-                                    <span className="font-medium">{costData.totalKwh.toFixed(2)} kWh</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Peak Usage Hour:</span>
-                                    <span className="font-medium">{costData.peakUsageHour}:00</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Avg Hourly Usage:</span>
-                                    <span className="font-medium">{(costData.totalKwh / 24).toFixed(2)} kWh</span>
-                                </div>
-                            </div>
+                    <div className="grid gap-4 md:grid-cols-3">
+                        <div className="text-center p-4 rounded-lg border">
+                            <p className="text-sm text-muted-foreground">Cost per kWh</p>
+                            <p className="text-xl font-bold">{(costData.totalCost / costData.totalKwh).toFixed(4)} BGN</p>
+                            <p className="text-xs text-muted-foreground">Average rate paid</p>
                         </div>
-
-                        <div className="space-y-2">
-                            <h4 className="font-semibold text-sm">Cost Analysis</h4>
-                            <div className="space-y-1 text-sm">
-                                <div className="flex justify-between">
-                                    <span>Total Cost:</span>
-                                    <span className="font-medium">{costData.totalCost.toFixed(2)} BGN</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Average Price:</span>
-                                    <span className="font-medium">{costData.averagePrice.toFixed(4)} BGN/kWh</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Cost per Hour:</span>
-                                    <span className="font-medium">{(costData.totalCost / 24).toFixed(2)} BGN</span>
-                                </div>
-                            </div>
+                        <div className="text-center p-4 rounded-lg border">
+                            <p className="text-sm text-muted-foreground">Peak Cost Hour</p>
+                            <p className="text-xl font-bold">{costData.peakCostHour || costData.peakUsageHour}:00</p>
+                            <p className="text-xs text-muted-foreground">Highest cost period</p>
                         </div>
-
-                        <div className="space-y-2">
-                            <h4 className="font-semibold text-sm">Optimization</h4>
-                            <div className="space-y-1 text-sm">
-                                <div className="flex justify-between">
-                                    <span>Efficiency Score:</span>
-                                    <span className="font-medium">{efficiencyScore}%</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Potential Savings:</span>
-                                    <span className="font-medium text-green-600">{potentialSavings.toFixed(2)} BGN</span>
-                                </div>
-                                <div className="flex justify-between">
-                                    <span>Recommendations:</span>
-                                    <span className="font-medium">{costData.suggestions.length}</span>
-                                </div>
-                            </div>
+                        <div className="text-center p-4 rounded-lg border">
+                            <p className="text-sm text-muted-foreground">Daily Average</p>
+                            <p className="text-xl font-bold">{(costData.totalKwh / 24).toFixed(2)} kWh/h</p>
+                            <p className="text-xs text-muted-foreground">Hourly consumption</p>
                         </div>
                     </div>
                 </CardContent>

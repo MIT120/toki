@@ -96,6 +96,32 @@ export interface InsightData {
     };
 }
 
+export interface RealTimeInsights {
+    meteringPointId: string;
+    currentUsage: number;
+    currentCost: number;
+    currentPrice: number;
+    hourProgress: number;
+    todayTotal: {
+        usage: number;
+        cost: number;
+    };
+    recommendations: Array<{
+        type: 'cost_optimization' | 'usage_reduction' | 'timing_adjustment';
+        urgencyLevel: 'low' | 'medium' | 'high';
+        message: string;
+        potentialSavings?: number;
+    }>;
+    trends: {
+        usageChange: number;
+        costChange: number;
+        efficiencyScore: number;
+    };
+    urgencyLevel?: 'low' | 'medium' | 'high';
+    potentialSavings?: number;
+    lastUpdated: string;
+}
+
 export interface DashboardData {
     totalMeteringPoints: number;
     totalUsage: number;

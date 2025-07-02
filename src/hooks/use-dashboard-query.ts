@@ -58,7 +58,9 @@ export const dashboardKeys = {
     all: ['dashboard'] as const,
     overview: (date?: string) => [...dashboardKeys.all, 'overview', date] as const,
     meteringPoint: (id: string) => [...dashboardKeys.all, 'meteringPoint', id] as const,
-    insights: (date?: string) => [...dashboardKeys.all, 'insights', date] as const,
+    insights: (meteringPointId: string, date?: string) => [...dashboardKeys.all, 'insights', meteringPointId, date] as const,
+    hourlyData: (meteringPointId: string, date: string) => [...dashboardKeys.all, 'hourlyData', meteringPointId, date] as const,
+    costAnalysis: (meteringPointId: string, date: string) => [...dashboardKeys.all, 'costAnalysis', meteringPointId, date] as const,
 };
 
 interface UseDashboardQueryOptions {
@@ -193,48 +195,3 @@ export function useDashboardQuery(options: UseDashboardQueryOptions = {}) {
         status: query.status,
     };
 }
-
-// Hook for metering point specific data
-export function useMeteringPointQuery(meteringPointId: string, options: {
-    enabled?: boolean;
-    date?: string;
-} = {}) {
-    const { enabled = true, date } = options;
-
-    return useQuery({
-        queryKey: dashboardKeys.meteringPoint(meteringPointId),
-        queryFn: async () => {
-            const url = date
-                ? `/api/metering-points/${meteringPointId}?date=${date}`
-                : `/api/metering-points/${meteringPointId}`;
-
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch metering point data: ${response.statusText}`);
-            }
-            return response.json();
-        },
-        enabled: enabled && !!meteringPointId,
-        staleTime: 1000 * 60 * 2, // 2 minutes for more specific data
-    });
-}
-
-// Hook for insights data
-export function useInsightsQuery(meteringPointId?: string, date?: string) {
-    return useQuery({
-        queryKey: dashboardKeys.insights(date),
-        queryFn: async () => {
-            const url = meteringPointId
-                ? `/api/insights/${meteringPointId}?date=${date || ''}`
-                : `/api/insights?date=${date || ''}`;
-
-            const response = await fetch(url);
-            if (!response.ok) {
-                throw new Error(`Failed to fetch insights: ${response.statusText}`);
-            }
-            return response.json();
-        },
-        enabled: true,
-        staleTime: 1000 * 60 * 10, // 10 minutes for insights
-    });
-} 

@@ -7,128 +7,180 @@ import {
     validateMeteringPointAccess
 } from '../../data';
 import { CostAnalysis, ElectricityData } from '../types';
+import { ErrorCodes, createAppError } from '../utils/error-logger';
+import {
+    executeWithErrorHandling,
+    validateDate,
+    validateDateRange,
+    validateMeteringPointId,
+    withPerformanceTracking,
+    type ServiceResponse
+} from '../utils/service-helpers';
 
 export async function getElectricityDataAction(
     meteringPointId: string,
     dateString: string
-): Promise<{ success: boolean; data?: ElectricityData; error?: string }> {
-    try {
-        if (!meteringPointId) {
-            return { success: false, error: 'Metering point ID is required' };
+): Promise<ServiceResponse<ElectricityData>> {
+    return executeWithErrorHandling(
+        async () => {
+            const context = {
+                component: 'ElectricityService',
+                action: 'getElectricityData',
+                meteringPointId,
+                additionalData: { date: dateString }
+            };
+
+            const validatedMeteringPointId = validateMeteringPointId(meteringPointId, context);
+            const validatedDate = validateDate(dateString, 'Date', context);
+
+            const hasAccess = await validateMeteringPointAccess(validatedMeteringPointId);
+            if (!hasAccess) {
+                throw createAppError(
+                    'Access denied for this metering point',
+                    ErrorCodes.FORBIDDEN,
+                    403,
+                    context
+                );
+            }
+
+            const data = await withPerformanceTracking(
+                () => getElectricityDataForDate(validatedMeteringPointId, validatedDate),
+                'getElectricityDataForDate',
+                context
+            );
+
+            if (!data) {
+                throw createAppError(
+                    'No data found for the specified date',
+                    ErrorCodes.RESOURCE_NOT_FOUND,
+                    404,
+                    context
+                );
+            }
+
+            return data;
+        },
+        'getElectricityData',
+        {
+            context: {
+                component: 'ElectricityService',
+                meteringPointId,
+                additionalData: { date: dateString }
+            },
+            retries: 2
         }
-
-        if (!dateString) {
-            return { success: false, error: 'Date is required' };
-        }
-
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            return { success: false, error: 'Invalid date format' };
-        }
-
-        const hasAccess = await validateMeteringPointAccess(meteringPointId);
-        if (!hasAccess) {
-            return { success: false, error: 'Access denied for this metering point' };
-        }
-
-        const data = await getElectricityDataForDate(meteringPointId, date);
-
-        if (!data) {
-            return { success: false, error: 'No data found for the specified date' };
-        }
-
-        return { success: true, data };
-    } catch (error) {
-        console.error('Error in getElectricityDataAction:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'An unexpected error occurred'
-        };
-    }
+    );
 }
 
 export async function getElectricityDataRangeAction(
     meteringPointId: string,
     startDateString: string,
     endDateString: string
-): Promise<{ success: boolean; data?: ElectricityData[]; error?: string }> {
-    try {
-        if (!meteringPointId) {
-            return { success: false, error: 'Metering point ID is required' };
+): Promise<ServiceResponse<ElectricityData[]>> {
+    return executeWithErrorHandling(
+        async () => {
+            const context = {
+                component: 'ElectricityService',
+                action: 'getElectricityDataRange',
+                meteringPointId,
+                additionalData: {
+                    startDate: startDateString,
+                    endDate: endDateString
+                }
+            };
+
+            const validatedMeteringPointId = validateMeteringPointId(meteringPointId, context);
+            const { startDate, endDate } = validateDateRange(
+                startDateString,
+                endDateString,
+                90,
+                context
+            );
+
+            const hasAccess = await validateMeteringPointAccess(validatedMeteringPointId);
+            if (!hasAccess) {
+                throw createAppError(
+                    'Access denied for this metering point',
+                    ErrorCodes.FORBIDDEN,
+                    403,
+                    context
+                );
+            }
+
+            const data = await withPerformanceTracking(
+                () => getElectricityDataForDateRange(validatedMeteringPointId, startDate, endDate),
+                'getElectricityDataForDateRange',
+                context
+            );
+
+            return data;
+        },
+        'getElectricityDataRange',
+        {
+            context: {
+                component: 'ElectricityService',
+                meteringPointId,
+                additionalData: {
+                    startDate: startDateString,
+                    endDate: endDateString
+                }
+            },
+            retries: 2
         }
-
-        if (!startDateString || !endDateString) {
-            return { success: false, error: 'Start date and end date are required' };
-        }
-
-        const startDate = new Date(startDateString);
-        const endDate = new Date(endDateString);
-
-        if (isNaN(startDate.getTime()) || isNaN(endDate.getTime())) {
-            return { success: false, error: 'Invalid date format' };
-        }
-
-        if (startDate > endDate) {
-            return { success: false, error: 'Start date must be before end date' };
-        }
-
-        const daysDiff = Math.ceil((endDate.getTime() - startDate.getTime()) / (1000 * 60 * 60 * 24));
-        if (daysDiff > 90) {
-            return { success: false, error: 'Date range cannot exceed 90 days' };
-        }
-
-        const hasAccess = await validateMeteringPointAccess(meteringPointId);
-        if (!hasAccess) {
-            return { success: false, error: 'Access denied for this metering point' };
-        }
-
-        const data = await getElectricityDataForDateRange(meteringPointId, startDate, endDate);
-
-        return { success: true, data };
-    } catch (error) {
-        console.error('Error in getElectricityDataRangeAction:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'An unexpected error occurred'
-        };
-    }
+    );
 }
 
 export async function getCostAnalysisAction(
     meteringPointId: string,
     dateString: string
-): Promise<{ success: boolean; data?: CostAnalysis; error?: string }> {
-    try {
-        if (!meteringPointId) {
-            return { success: false, error: 'Metering point ID is required' };
+): Promise<ServiceResponse<CostAnalysis>> {
+    return executeWithErrorHandling(
+        async () => {
+            const context = {
+                component: 'ElectricityService',
+                action: 'getCostAnalysis',
+                meteringPointId,
+                additionalData: { date: dateString }
+            };
+
+            const validatedMeteringPointId = validateMeteringPointId(meteringPointId, context);
+            const validatedDate = validateDate(dateString, 'Date', context);
+
+            const hasAccess = await validateMeteringPointAccess(validatedMeteringPointId);
+            if (!hasAccess) {
+                throw createAppError(
+                    'Access denied for this metering point',
+                    ErrorCodes.FORBIDDEN,
+                    403,
+                    context
+                );
+            }
+
+            const analysis = await withPerformanceTracking(
+                () => calculateCostAnalysis(validatedMeteringPointId, validatedDate),
+                'calculateCostAnalysis',
+                context
+            );
+
+            if (!analysis) {
+                throw createAppError(
+                    'Unable to calculate cost analysis - insufficient data',
+                    ErrorCodes.INSUFFICIENT_DATA,
+                    404,
+                    context
+                );
+            }
+
+            return analysis;
+        },
+        'getCostAnalysis',
+        {
+            context: {
+                component: 'ElectricityService',
+                meteringPointId,
+                additionalData: { date: dateString }
+            },
+            retries: 1
         }
-
-        if (!dateString) {
-            return { success: false, error: 'Date is required' };
-        }
-
-        const date = new Date(dateString);
-        if (isNaN(date.getTime())) {
-            return { success: false, error: 'Invalid date format' };
-        }
-
-        const hasAccess = await validateMeteringPointAccess(meteringPointId);
-        if (!hasAccess) {
-            return { success: false, error: 'Access denied for this metering point' };
-        }
-
-        const analysis = await calculateCostAnalysis(meteringPointId, date);
-
-        if (!analysis) {
-            return { success: false, error: 'Unable to calculate cost analysis - insufficient data' };
-        }
-
-        return { success: true, data: analysis };
-    } catch (error) {
-        console.error('Error in getCostAnalysisAction:', error);
-        return {
-            success: false,
-            error: error instanceof Error ? error.message : 'An unexpected error occurred'
-        };
-    }
+    );
 } 

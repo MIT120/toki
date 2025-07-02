@@ -1,7 +1,6 @@
 "use client";
 
 import { AlertCircle, DollarSign, TrendingUp, Zap } from 'lucide-react';
-import { useEffect, useState } from 'react';
 import {
     Bar,
     CartesianGrid,
@@ -13,9 +12,12 @@ import {
     XAxis,
     YAxis
 } from 'recharts';
+import { useHourlyDataQuery } from '../../hooks/use-hourly-data-query';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
+import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+
 interface HourlyData {
     hour: number;
     usage: number;
@@ -30,34 +32,19 @@ interface HourlyChartProps {
 }
 
 export default function HourlyChart({ meteringPointId, date, title = "Hourly Electricity Data" }: HourlyChartProps) {
-    const [hourlyData, setHourlyData] = useState<HourlyData[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
-
-    useEffect(() => {
-        if (meteringPointId && date) {
-            fetchHourlyData();
-        }
-    }, [meteringPointId, date]);
-
-    const fetchHourlyData = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch(`/api/electricity/${meteringPointId}/hourly?date=${date}`);
-            const data = await response.json();
-
-            if (!response.ok) {
-                throw new Error(data.error || 'Failed to fetch hourly data');
-            }
-
-            setHourlyData(data.data || []);
-            setError(null);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
+    const {
+        data: hourlyData,
+        isLoading,
+        isError,
+        error,
+        refetch,
+        isFetching,
+        isRefetching
+    } = useHourlyDataQuery(meteringPointId, date, {
+        enabled: !!meteringPointId && !!date,
+        enableAnalytics: true,
+        staleTime: 1000 * 60 * 2, // 2 minutes
+    });
 
     const formatHour = (hour: number) => {
         return `${hour.toString().padStart(2, '0')}:00`;
@@ -82,11 +69,12 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
         return null;
     };
 
-    if (loading) {
+    if (isLoading) {
         return (
             <Card>
                 <CardHeader>
                     <CardTitle>{title}</CardTitle>
+                    <CardDescription>Loading hourly data...</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="h-[400px] bg-muted rounded animate-pulse"></div>
@@ -95,7 +83,8 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
         );
     }
 
-    if (error) {
+    if (isError) {
+        const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         return (
             <Card>
                 <CardHeader>
@@ -104,7 +93,19 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
                 <CardContent>
                     <Alert variant="destructive">
                         <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>{error}</AlertDescription>
+                        <AlertDescription>
+                            {errorMessage}
+                            <div className="mt-2">
+                                <Button
+                                    onClick={() => refetch()}
+                                    disabled={isRefetching}
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    {isRefetching ? 'Retrying...' : 'Try Again'}
+                                </Button>
+                            </div>
+                        </AlertDescription>
                     </Alert>
                 </CardContent>
             </Card>
@@ -120,6 +121,15 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
                 <CardContent>
                     <div className="flex items-center justify-center h-[400px] text-muted-foreground">
                         No data available for the selected date
+                        <Button
+                            onClick={() => refetch()}
+                            disabled={isFetching}
+                            variant="outline"
+                            size="sm"
+                            className="ml-4"
+                        >
+                            {isFetching ? 'Refreshing...' : 'Refresh'}
+                        </Button>
                     </div>
                 </CardContent>
             </Card>
@@ -134,6 +144,27 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
 
     return (
         <div className="space-y-4">
+            {/* Header with refresh indicator */}
+            <div className="flex items-center justify-between">
+                <div>
+                    <h3 className="text-lg font-semibold">{title}</h3>
+                    {(isFetching || isRefetching) && (
+                        <div className="flex items-center text-sm text-muted-foreground mt-1">
+                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-muted-foreground border-t-transparent mr-2" />
+                            {isRefetching ? 'Refreshing...' : 'Loading...'}
+                        </div>
+                    )}
+                </div>
+                <Button
+                    onClick={() => refetch()}
+                    disabled={isRefetching}
+                    variant="outline"
+                    size="sm"
+                >
+                    {isRefetching ? 'Refreshing...' : 'Refresh'}
+                </Button>
+            </div>
+
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 <Card>
                     <CardContent className="flex items-center justify-between p-4 lg:p-6">
@@ -217,34 +248,30 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
                                 />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend />
-
                                 <Bar
                                     yAxisId="left"
                                     dataKey="usage"
-                                    fill="#3B82F6"
+                                    fill="#3b82f6"
                                     name="Usage (kWh)"
-                                    opacity={0.7}
+                                    radius={[2, 2, 0, 0]}
                                 />
-
                                 <Line
                                     yAxisId="right"
                                     type="monotone"
                                     dataKey="price"
-                                    stroke="#F59E0B"
-                                    strokeWidth={3}
+                                    stroke="#f59e0b"
+                                    strokeWidth={2}
                                     name="Price (BGN/kWh)"
-                                    dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
+                                    dot={{ fill: '#f59e0b', strokeWidth: 2, r: 3 }}
                                 />
-
                                 <Line
                                     yAxisId="right"
                                     type="monotone"
                                     dataKey="cost"
-                                    stroke="#EF4444"
+                                    stroke="#ef4444"
                                     strokeWidth={2}
                                     name="Cost (BGN)"
-                                    dot={{ fill: '#EF4444', strokeWidth: 2, r: 3 }}
-                                    strokeDasharray="5 5"
+                                    dot={{ fill: '#ef4444', strokeWidth: 2, r: 3 }}
                                 />
                             </ComposedChart>
                         </ResponsiveContainer>

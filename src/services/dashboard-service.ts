@@ -39,12 +39,28 @@ interface HourlyData {
 
 interface RealTimeInsights {
     meteringPointId: string;
-    currentHour: number;
     currentUsage: number;
-    currentPrice: number;
     currentCost: number;
-    recommendation: string;
-    urgencyLevel: 'low' | 'medium' | 'high';
+    currentPrice: number;
+    hourProgress: number;
+    todayTotal: {
+        usage: number;
+        cost: number;
+    };
+    recommendations: Array<{
+        type: 'cost_optimization' | 'usage_reduction' | 'timing_adjustment';
+        urgencyLevel: 'low' | 'medium' | 'high';
+        message: string;
+        potentialSavings?: number;
+    }>;
+    trends: {
+        usageChange: number;
+        costChange: number;
+        efficiencyScore: number;
+    };
+    urgencyLevel?: 'low' | 'medium' | 'high';
+    potentialSavings?: number;
+    lastUpdated: string;
 }
 
 export async function getDashboardOverviewAction(
@@ -254,14 +270,44 @@ export async function getRealTimeInsightsAction(
             usage
         );
 
+        // Calculate today's totals
+        const todayUsage = usage.reduce((sum, u) => sum + u.kwh, 0);
+        const todayCost = usage.reduce((sum, u, index) => {
+            const price = prices[index]?.price || 0;
+            return sum + (u.kwh * price);
+        }, 0);
+
+        // Calculate hour progress (0-100%)
+        const now = new Date();
+        const hourProgress = (now.getMinutes() / 60) * 100;
+
+        // Generate mock trends (in a real app, these would come from historical data)
+        const mockTrends = {
+            usageChange: Math.random() * 20 - 10, // -10% to +10%
+            costChange: Math.random() * 20 - 10,  // -10% to +10%
+            efficiencyScore: Math.random() * 40 + 60, // 60-100%
+        };
+
         const insights: RealTimeInsights = {
             meteringPointId,
-            currentHour,
             currentUsage,
-            currentPrice,
             currentCost,
-            recommendation,
-            urgencyLevel
+            currentPrice,
+            hourProgress,
+            todayTotal: {
+                usage: todayUsage,
+                cost: todayCost,
+            },
+            recommendations: [{
+                type: 'cost_optimization',
+                urgencyLevel,
+                message: recommendation,
+                potentialSavings: currentCost * 0.15, // 15% potential savings
+            }],
+            trends: mockTrends,
+            urgencyLevel,
+            potentialSavings: currentCost * 0.15,
+            lastUpdated: new Date().toISOString(),
         };
 
         return { success: true, data: insights };

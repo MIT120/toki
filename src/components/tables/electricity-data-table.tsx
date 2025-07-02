@@ -9,7 +9,7 @@ import {
     Search
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
-import { HourlyData } from '../../types';
+import { useHourlyDataQuery } from '../../hooks/use-hourly-data-query';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -38,45 +38,39 @@ export default function ElectricityDataTable({
     date,
     title = "Hourly Electricity Data"
 }: ElectricityDataTableProps) {
-    const [data, setData] = useState<HourlyData[]>([]);
-    const [filteredData, setFilteredData] = useState<HourlyData[]>([]);
-    const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);
+    const {
+        data: rawData,
+        isLoading,
+        isError,
+        error,
+        refetch,
+        isFetching,
+        isRefetching
+    } = useHourlyDataQuery(meteringPointId, date, {
+        enabled: !!meteringPointId && !!date,
+        enableAnalytics: true,
+        staleTime: 1000 * 60 * 2, // 2 minutes
+    });
+
+    const [filteredData, setFilteredData] = useState<any[]>([]);
     const [sortField, setSortField] = useState<SortField>('hour');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [searchTerm, setSearchTerm] = useState('');
 
+    // Update filtered data when raw data, search term, or sort options change
     useEffect(() => {
-        if (meteringPointId && date) {
-            fetchData();
+        if (!rawData) {
+            setFilteredData([]);
+            return;
         }
-    }, [meteringPointId, date]);
 
-    useEffect(() => {
         filterAndSortData();
-    }, [data, searchTerm, sortField, sortDirection]);
-
-    const fetchData = async () => {
-        try {
-            setLoading(true);
-            const response = await fetch(`/api/electricity/${meteringPointId}/hourly?date=${date}`);
-            const result = await response.json();
-
-            if (!response.ok) {
-                throw new Error(result.error || 'Failed to fetch data');
-            }
-
-            setData(result.data || []);
-            setError(null);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'An error occurred');
-        } finally {
-            setLoading(false);
-        }
-    };
+    }, [rawData, searchTerm, sortField, sortDirection]);
 
     const filterAndSortData = () => {
-        let filtered = [...data];
+        if (!rawData) return;
+
+        let filtered = [...rawData];
 
         // Filter by search term
         if (searchTerm) {
@@ -152,6 +146,8 @@ export default function ElectricityDataTable({
     };
 
     const exportToCSV = () => {
+        if (!filteredData.length) return;
+
         const headers = ['Hour', 'Usage (kWh)', 'Price (BGN/kWh)', 'Cost (BGN)'];
         const csvContent = [
             headers.join(','),
@@ -174,11 +170,12 @@ export default function ElectricityDataTable({
         URL.revokeObjectURL(url);
     };
 
-    if (loading) {
+    if (isLoading) {
         return (
             <Card>
                 <CardHeader>
                     <CardTitle>{title}</CardTitle>
+                    <CardDescription>Loading electricity data...</CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="space-y-4">
@@ -191,7 +188,8 @@ export default function ElectricityDataTable({
         );
     }
 
-    if (error) {
+    if (isError) {
+        const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         return (
             <Card>
                 <CardHeader>
@@ -200,14 +198,26 @@ export default function ElectricityDataTable({
                 <CardContent>
                     <Alert variant="destructive">
                         <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>{error}</AlertDescription>
+                        <AlertDescription>
+                            {errorMessage}
+                            <div className="mt-2">
+                                <Button
+                                    onClick={() => refetch()}
+                                    disabled={isRefetching}
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    {isRefetching ? 'Retrying...' : 'Try Again'}
+                                </Button>
+                            </div>
+                        </AlertDescription>
                     </Alert>
                 </CardContent>
             </Card>
         );
     }
 
-    if (!data || data.length === 0) {
+    if (!rawData || rawData.length === 0) {
         return (
             <Card>
                 <CardHeader>
@@ -218,6 +228,16 @@ export default function ElectricityDataTable({
                         <Calendar className="h-4 w-4" />
                         <AlertDescription>
                             No data available for {new Date(date).toLocaleDateString()}
+                            <div className="mt-2">
+                                <Button
+                                    onClick={() => refetch()}
+                                    disabled={isFetching}
+                                    variant="outline"
+                                    size="sm"
+                                >
+                                    {isFetching ? 'Refreshing...' : 'Refresh'}
+                                </Button>
+                            </div>
                         </AlertDescription>
                     </Alert>
                 </CardContent>
@@ -225,10 +245,10 @@ export default function ElectricityDataTable({
         );
     }
 
-    const maxUsage = Math.max(...data.map(d => d.usage));
-    const avgPrice = data.reduce((sum, d) => sum + d.price, 0) / data.length;
-    const totalUsage = data.reduce((sum, d) => sum + d.usage, 0);
-    const totalCost = data.reduce((sum, d) => sum + d.cost, 0);
+    const maxUsage = Math.max(...rawData.map(d => d.usage));
+    const avgPrice = rawData.reduce((sum, d) => sum + d.price, 0) / rawData.length;
+    const totalUsage = rawData.reduce((sum, d) => sum + d.usage, 0);
+    const totalCost = rawData.reduce((sum, d) => sum + d.cost, 0);
 
     const SortIcon = ({ field }: { field: SortField }) => {
         if (sortField !== field) return null;
@@ -242,15 +262,38 @@ export default function ElectricityDataTable({
             <CardHeader>
                 <div className="flex items-center justify-between">
                     <div>
-                        <CardTitle>{title}</CardTitle>
+                        <div className="flex items-center gap-3">
+                            <CardTitle>{title}</CardTitle>
+                            {(isFetching || isRefetching) && (
+                                <div className="flex items-center text-sm text-muted-foreground">
+                                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-muted-foreground border-t-transparent mr-2" />
+                                    {isRefetching ? 'Refreshing...' : 'Loading...'}
+                                </div>
+                            )}
+                        </div>
                         <CardDescription>
-                            Data for {new Date(date).toLocaleDateString()} • {filteredData.length} of {data.length} hours
+                            Data for {new Date(date).toLocaleDateString()} • {filteredData.length} of {rawData.length} hours
                         </CardDescription>
                     </div>
-                    <Button onClick={exportToCSV} variant="outline" size="sm">
-                        <Download className="h-4 w-4 mr-2" />
-                        Export CSV
-                    </Button>
+                    <div className="flex items-center gap-2">
+                        <Button
+                            onClick={() => refetch()}
+                            disabled={isRefetching}
+                            variant="outline"
+                            size="sm"
+                        >
+                            {isRefetching ? 'Refreshing...' : 'Refresh'}
+                        </Button>
+                        <Button
+                            onClick={exportToCSV}
+                            variant="outline"
+                            size="sm"
+                            disabled={!filteredData.length}
+                        >
+                            <Download className="h-4 w-4 mr-2" />
+                            Export CSV
+                        </Button>
+                    </div>
                 </div>
 
                 <div className="flex items-center space-x-2">
@@ -354,6 +397,15 @@ export default function ElectricityDataTable({
                 {filteredData.length === 0 && searchTerm && (
                     <div className="text-center py-8 text-muted-foreground">
                         No results found for "{searchTerm}"
+                        <div className="mt-2">
+                            <Button
+                                onClick={() => setSearchTerm('')}
+                                variant="outline"
+                                size="sm"
+                            >
+                                Clear Search
+                            </Button>
+                        </div>
                     </div>
                 )}
             </CardContent>

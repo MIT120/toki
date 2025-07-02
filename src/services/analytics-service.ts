@@ -12,12 +12,12 @@ let posthogServer: PostHog | null = null;
 
 function getPostHogServer(): PostHog {
     if (!posthogServer) {
-        if (!process.env.POSTHOG_API_KEY) {
+        if (!process.env.NEXT_PUBLIC_POSTHOG_KEY) {
             throw new Error('POSTHOG_API_KEY environment variable is required');
         }
 
-        posthogServer = new PostHog(process.env.POSTHOG_API_KEY, {
-            host: 'https://us.i.posthog.com',
+        posthogServer = new PostHog(process.env.NEXT_PUBLIC_POSTHOG_KEY, {
+            host: process.env.NEXT_PUBLIC_POSTHOG_HOST,
             flushAt: 20,
             flushInterval: 10000,
         });
