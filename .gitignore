@@ -124,3 +124,6 @@ data/*.json
 # Turbo
 .turbo
 .cursor
+
+# Sentry Config File
+.env.sentry-build-plugin

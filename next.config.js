@@ -2,7 +2,6 @@
 const nextConfig = {
     trailingSlash: true,
     skipTrailingSlashRedirect: true,
-    output: 'standalone',
     images: {
         unoptimized: true
     },
