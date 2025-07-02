@@ -69,29 +69,18 @@ export default function DateSelector({
     };
 
     const getQuickDateOptions = () => {
-        const today = new Date();
-        const yesterday = new Date(today);
-        yesterday.setDate(yesterday.getDate() - 1);
-        const weekAgo = new Date(today);
-        weekAgo.setDate(weekAgo.getDate() - 7);
-
-        return [
-            {
-                label: 'Today',
-                value: today.toISOString().split('T')[0],
-                available: isDateAvailable(today.toISOString().split('T')[0])
-            },
-            {
-                label: 'Yesterday',
-                value: yesterday.toISOString().split('T')[0],
-                available: isDateAvailable(yesterday.toISOString().split('T')[0])
-            },
-            {
-                label: 'Week Ago',
-                value: weekAgo.toISOString().split('T')[0],
-                available: isDateAvailable(weekAgo.toISOString().split('T')[0])
-            }
+        // Use known valid dates from our GCS data range (April 2022)
+        // Only dates 2022-04-10 to 2022-04-30 have complete data for both meters
+        const validDates = [
+            { label: 'April 15', value: '2022-04-15' },
+            { label: 'April 20', value: '2022-04-20' },
+            { label: 'April 25', value: '2022-04-25' }
         ];
+
+        return validDates.map(date => ({
+            ...date,
+            available: isDateAvailable(date.value)
+        }));
     };
 
     const canGoToPreviousDay = () => {

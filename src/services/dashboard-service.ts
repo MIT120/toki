@@ -2,8 +2,6 @@
 
 import {
     calculateCostAnalysis,
-    generateMockPriceData,
-    generateMockUsageData,
     getMeteringPoints,
     getPricesForDate,
     getUsageForMeteringPointAndDate
@@ -67,7 +65,7 @@ export async function getDashboardOverviewAction(
     dateString?: string
 ): Promise<{ success: boolean; data?: DashboardOverview; error?: string }> {
     try {
-        const targetDate = dateString ? new Date(dateString) : new Date();
+        const targetDate = dateString ? new Date(dateString) : new Date('2022-04-15');
         if (isNaN(targetDate.getTime())) {
             return { success: false, error: 'Invalid date format' };
         }
@@ -81,6 +79,7 @@ export async function getDashboardOverviewAction(
         let highestCostMeter = '';
         let highestCost = 0;
         let overallPeakHour = 0;
+        let maxPeakUsage = 0;
         const insights: string[] = [];
 
         for (const meter of meteringPoints) {
@@ -98,14 +97,19 @@ export async function getDashboardOverviewAction(
                         highestCostMeter = meter.name || meter.id;
                     }
 
-                    overallPeakHour = analysis.peakUsageHour;
+                    // Find the true overall peak hour by comparing peak usage values
+                    // Note: This is a simplified approach - in reality we'd need to aggregate hourly data across all meters
+                    if (analysis.totalKwh > maxPeakUsage) {
+                        maxPeakUsage = analysis.totalKwh;
+                        overallPeakHour = analysis.peakUsageHour;
+                    }
 
                     if (analysis.suggestions.length > 0) {
                         insights.push(`${meter.name}: ${analysis.suggestions[0]}`);
                     }
                 }
             } catch (error) {
-                console.warn(`Failed to get data for meter ${meter.id}:`, error);
+                console.warn(`Failed to get GCS data for meter ${meter.id}:`, error);
             }
         }
 
@@ -156,30 +160,14 @@ export async function getHourlyDataAction(
             return { success: false, error: 'Invalid date format' };
         }
 
-        let usage, prices;
+        const [usage, prices] = await Promise.all([
+            getUsageForMeteringPointAndDate(meteringPointId, date),
+            getPricesForDate(date)
+        ]);
 
-        try {
-            // Try to get real data first
-            [usage, prices] = await Promise.all([
-                getUsageForMeteringPointAndDate(meteringPointId, date),
-                getPricesForDate(date)
-            ]);
-
-            // If no real data available, use mock data
-            if (usage.length === 0) {
-                console.log(`No usage data found for ${meteringPointId}, using mock data`);
-                usage = generateMockUsageData(meteringPointId, date);
-            }
-
-            if (prices.length === 0) {
-                console.log(`No price data found for ${date.toISOString().split('T')[0]}, using mock data`);
-                prices = generateMockPriceData(date);
-            }
-        } catch (error) {
-            console.log(`Error fetching real data, using mock data:`, error);
-            // Fall back to mock data if there are any errors
-            usage = generateMockUsageData(meteringPointId, date);
-            prices = generateMockPriceData(date);
+        if (usage.length === 0 || prices.length === 0) {
+            console.log(`❌ No GCS data available for ${meteringPointId} on ${dateString}`);
+            return { success: false, error: 'No data available for the specified date and metering point' };
         }
 
         const hourlyMap = new Map<number, HourlyData>();
@@ -218,6 +206,7 @@ export async function getHourlyDataAction(
         }
 
         const hourlyData = Array.from(hourlyMap.values()).sort((a, b) => a.hour - b.hour);
+        console.log(`✅ Generated hourly data for ${meteringPointId} on ${dateString} from GCS`);
 
         return { success: true, data: hourlyData };
     } catch (error) {
@@ -238,7 +227,7 @@ export async function getRealTimeInsightsAction(
             return { success: false, error: 'Metering point ID is required' };
         }
 
-        const targetDate = dateString ? new Date(dateString) : new Date();
+        const targetDate = dateString ? new Date(dateString) : new Date('2022-04-15');
         if (isNaN(targetDate.getTime())) {
             return { success: false, error: 'Invalid date format' };
         }
@@ -249,6 +238,11 @@ export async function getRealTimeInsightsAction(
             getUsageForMeteringPointAndDate(meteringPointId, targetDate),
             getPricesForDate(targetDate)
         ]);
+
+        if (usage.length === 0 || prices.length === 0) {
+            console.log(`❌ No GCS data available for real-time insights for ${meteringPointId}`);
+            return { success: false, error: 'No data available for real-time insights' };
+        }
 
         const currentUsageRecords = usage.filter(u =>
             new Date(u.timestamp * 1000).getHours() === currentHour
@@ -272,20 +266,47 @@ export async function getRealTimeInsightsAction(
 
         // Calculate today's totals
         const todayUsage = usage.reduce((sum, u) => sum + u.kwh, 0);
-        const todayCost = usage.reduce((sum, u, index) => {
-            const price = prices[index]?.price || 0;
+
+        // Create proper hour-to-price mapping for accurate cost calculation
+        const priceByHour = new Map<number, number>();
+        for (const priceRecord of prices) {
+            const hour = new Date(priceRecord.timestamp * 1000).getHours();
+            priceByHour.set(hour, priceRecord.price);
+        }
+
+        // Calculate cost using proper timestamp matching
+        const todayCost = usage.reduce((sum, u) => {
+            const hour = new Date(u.timestamp * 1000).getHours();
+            const price = priceByHour.get(hour) || 0;
             return sum + (u.kwh * price);
         }, 0);
 
-        // Calculate hour progress (0-100%)
-        const now = new Date();
-        const hourProgress = (now.getMinutes() / 60) * 100;
+        // Calculate hour progress (0-100%) - use fixed value for historical data
+        const hourProgress = dateString ? 50 : ((new Date().getMinutes() / 60) * 100);
 
-        // Generate mock trends (in a real app, these would come from historical data)
-        const mockTrends = {
-            usageChange: Math.random() * 20 - 10, // -10% to +10%
-            costChange: Math.random() * 20 - 10,  // -10% to +10%
-            efficiencyScore: Math.random() * 40 + 60, // 60-100%
+        // Calculate deterministic trends based on actual data
+        const avgUsagePerHour = todayUsage / 24;
+        const avgCostPerHour = todayCost / 24;
+        const avgPriceForDay = prices.reduce((sum, p) => sum + p.price, 0) / prices.length;
+
+        // Calculate efficiency score based on actual usage patterns
+        const peakHours = usage.filter(u => {
+            const hour = new Date(u.timestamp * 1000).getHours();
+            return hour >= 8 && hour <= 18; // Business hours
+        });
+        const offPeakHours = usage.filter(u => {
+            const hour = new Date(u.timestamp * 1000).getHours();
+            return hour < 8 || hour > 18; // Off-peak hours
+        });
+
+        const peakUsage = peakHours.reduce((sum, u) => sum + u.kwh, 0);
+        const offPeakUsage = offPeakHours.reduce((sum, u) => sum + u.kwh, 0);
+        const efficiencyScore = offPeakUsage > 0 ? Math.min(100, (peakUsage / offPeakUsage) * 50) : 75;
+
+        const deterministicTrends = {
+            usageChange: currentUsage - avgUsagePerHour, // Actual vs average
+            costChange: currentCost - avgCostPerHour,   // Actual vs average  
+            efficiencyScore: Math.round(efficiencyScore * 100) / 100, // Based on peak vs off-peak usage
         };
 
         const insights: RealTimeInsights = {
@@ -304,10 +325,10 @@ export async function getRealTimeInsightsAction(
                 message: recommendation,
                 potentialSavings: currentCost * 0.15, // 15% potential savings
             }],
-            trends: mockTrends,
+            trends: deterministicTrends,
             urgencyLevel,
             potentialSavings: currentCost * 0.15,
-            lastUpdated: new Date().toISOString(),
+            lastUpdated: dateString ? targetDate.toISOString() : new Date().toISOString(),
         };
 
         return { success: true, data: insights };

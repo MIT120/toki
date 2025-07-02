@@ -7,11 +7,11 @@ import {
     Clock,
     DollarSign,
     Info,
-    RefreshCw,
     TrendingUp,
     Zap
 } from 'lucide-react';
 import { useInsightsQuery } from '../../hooks/use-insights-query';
+import RefreshHeader from '../common/refresh-header';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -42,7 +42,7 @@ export default function RealTimeInsightsComponent({
     } = useInsightsQuery(meteringPointId, date, {
         enabled: !!meteringPointId,
         enableAnalytics: true,
-        staleTime: 1000 * 60 * 10, // 10 minutes
+        staleTime: 1000 * 60 * 1, // 1 minute for real-time insights
         refetchInterval: autoRefresh ? refreshInterval : false,
     });
 
@@ -57,9 +57,9 @@ export default function RealTimeInsightsComponent({
 
     const getUrgencyIcon = (urgencyLevel: 'low' | 'medium' | 'high') => {
         switch (urgencyLevel) {
-            case 'high': return <AlertTriangle className="h-5 w-5 text-red-500" />;
-            case 'medium': return <AlertCircle className="h-5 w-5 text-yellow-500" />;
-            case 'low': return <CheckCircle className="h-5 w-5 text-green-500" />;
+            case 'high': return <AlertTriangle className={`h-5 w-5 ${getUrgencyColor(urgencyLevel)}`} />;
+            case 'medium': return <AlertCircle className={`h-5 w-5 ${getUrgencyColor(urgencyLevel)}`} />;
+            case 'low': return <Info className={`h-5 w-5 ${getUrgencyColor(urgencyLevel)}`} />;
             default: return <Info className="h-5 w-5 text-gray-500" />;
         }
     };
@@ -74,12 +74,12 @@ export default function RealTimeInsightsComponent({
     };
 
     const formatTime = (date: Date) => {
-        return date.toLocaleTimeString('en-US', {
-            hour12: false,
+        return new Intl.DateTimeFormat('en-US', {
             hour: '2-digit',
             minute: '2-digit',
-            second: '2-digit'
-        });
+            second: '2-digit',
+            hour12: false
+        }).format(date);
     };
 
     const getCurrentHourProgress = () => {
@@ -88,125 +88,87 @@ export default function RealTimeInsightsComponent({
         return (minutes / 60) * 100;
     };
 
-    if (isLoading && !insights) {
+    if (isLoading) {
         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Clock className="h-5 w-5" />
-                        Real-Time Insights
-                    </CardTitle>
-                    <CardDescription>Loading real-time data...</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        <div className="h-8 bg-muted rounded animate-pulse"></div>
-                        <div className="h-4 bg-muted rounded animate-pulse"></div>
-                        <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
-                    </div>
-                </CardContent>
-            </Card>
+            <div className="space-y-4">
+                <Card>
+                    <CardHeader>
+                        <div className="h-6 bg-muted rounded w-1/3 animate-pulse"></div>
+                        <div className="h-4 bg-muted rounded w-2/3 animate-pulse"></div>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="space-y-4">
+                            <div className="h-8 bg-muted rounded animate-pulse"></div>
+                            <div className="h-4 bg-muted rounded animate-pulse"></div>
+                            <div className="h-4 bg-muted rounded w-3/4 animate-pulse"></div>
+                        </div>
+                    </CardContent>
+                </Card>
+            </div>
         );
     }
 
     if (isError) {
         const errorMessage = error instanceof Error ? error.message : 'An error occurred';
         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Clock className="h-5 w-5" />
-                        Real-Time Insights
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Alert variant="destructive">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertTitle>Error</AlertTitle>
-                        <AlertDescription>
-                            {errorMessage}
-                            <div className="mt-2">
-                                <Button
-                                    onClick={() => refetch()}
-                                    disabled={isRefetching}
-                                    variant="outline"
-                                    size="sm"
-                                >
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    {isRefetching ? 'Retrying...' : 'Retry'}
-                                </Button>
-                            </div>
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
+            <Alert variant="destructive">
+                <AlertTriangle className="h-4 w-4" />
+                <AlertTitle>Error Loading Insights</AlertTitle>
+                <AlertDescription>
+                    {errorMessage}
+                    <div className="mt-2">
+                        <Button
+                            onClick={() => refetch()}
+                            disabled={isRefetching}
+                            variant="outline"
+                            size="sm"
+                        >
+                            {isRefetching ? 'Retrying...' : 'Try Again'}
+                        </Button>
+                    </div>
+                </AlertDescription>
+            </Alert>
         );
     }
 
     if (!insights) {
         return (
-            <Card>
-                <CardHeader>
-                    <CardTitle className="flex items-center gap-2">
-                        <Clock className="h-5 w-5" />
-                        Real-Time Insights
-                    </CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Alert>
-                        <Info className="h-4 w-4" />
-                        <AlertDescription>
-                            No real-time data available for the selected metering point.
-                            <div className="mt-2">
-                                <Button
-                                    onClick={() => refetch()}
-                                    disabled={isFetching}
-                                    variant="outline"
-                                    size="sm"
-                                >
-                                    <RefreshCw className="h-4 w-4 mr-2" />
-                                    {isFetching ? 'Refreshing...' : 'Refresh'}
-                                </Button>
-                            </div>
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
+            <Alert>
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>No Insights Available</AlertTitle>
+                <AlertDescription>
+                    Real-time insights are not available at the moment.
+                    <div className="mt-2">
+                        <Button
+                            onClick={() => refetch()}
+                            disabled={isFetching}
+                            variant="outline"
+                            size="sm"
+                        >
+                            {isFetching ? 'Refreshing...' : 'Refresh'}
+                        </Button>
+                    </div>
+                </AlertDescription>
+            </Alert>
         );
     }
 
     return (
         <div className="space-y-4">
+            {/* Header with refresh functionality */}
+            <RefreshHeader
+                title="Real-Time Insights"
+                subtitle={`Live monitoring and AI-powered recommendations • Last updated: ${formatTime(new Date(insights.lastUpdated))}`}
+                isRefreshing={isRefetching}
+                isFetching={isFetching}
+                onRefresh={() => refetch()}
+                showLastUpdated={false}
+            >
+                <Clock className="h-5 w-5 text-muted-foreground" />
+            </RefreshHeader>
+
             <Card>
-                <CardHeader>
-                    <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-2">
-                            <Clock className="h-5 w-5" />
-                            <CardTitle>Real-Time Insights</CardTitle>
-                        </div>
-                        <div className="flex items-center gap-2">
-                            {(isFetching || isRefetching) && (
-                                <div className="flex items-center text-sm text-muted-foreground">
-                                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-muted-foreground border-t-transparent mr-2" />
-                                    {isRefetching ? 'Refreshing...' : 'Loading...'}
-                                </div>
-                            )}
-                            <Button
-                                onClick={() => refetch()}
-                                disabled={isRefetching}
-                                variant="outline"
-                                size="sm"
-                            >
-                                <RefreshCw className="h-4 w-4 mr-2" />
-                                {isRefetching ? 'Refreshing...' : 'Refresh'}
-                            </Button>
-                        </div>
-                    </div>
-                    <CardDescription>
-                        Live monitoring and AI-powered recommendations • Last updated: {formatTime(new Date(insights.lastUpdated))}
-                    </CardDescription>
-                </CardHeader>
-                <CardContent className="space-y-6">
+                <CardContent className="space-y-6 pt-6">
                     {/* Current Status */}
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                         <Card className="border-l-4 border-l-blue-500">

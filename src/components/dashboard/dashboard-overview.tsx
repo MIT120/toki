@@ -3,6 +3,7 @@
 import { AlertCircle, Clock, DollarSign, TrendingUp, Zap } from 'lucide-react';
 import { useDashboardAnalytics } from '../../contexts/analytics-context';
 import { useDashboardQuery } from '../../hooks/use-dashboard-query';
+import RefreshHeader from '../common/refresh-header';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
@@ -134,22 +135,15 @@ export default function DashboardOverviewComponent({ date }: DashboardOverviewPr
 
     return (
         <div className="space-y-6">
-            {/* Header with refresh indicator */}
-            <div className="flex items-center justify-between">
-                <div className="space-y-1">
-                    <div className="flex items-center gap-2">
-                        <h1 className="text-3xl font-bold tracking-tight">Electricity Dashboard</h1>
-                        {(isFetching || isRefetching) && (
-                            <div className="flex items-center text-sm text-muted-foreground">
-                                <div className="animate-spin rounded-full h-4 w-4 border-2 border-muted-foreground border-t-transparent mr-2" />
-                                {isRefetching ? 'Refreshing...' : 'Loading...'}
-                            </div>
-                        )}
-                    </div>
-                    <p className="text-muted-foreground">
-                        Welcome back, {customer.owner}! Here's your bakery's energy overview.
-                    </p>
-                </div>
+            {/* Header with refresh functionality */}
+            <RefreshHeader
+                title="Electricity Dashboard"
+                subtitle={`Welcome back, ${customer.owner}! Here's your bakery's energy overview.`}
+                isRefreshing={isRefetching}
+                isFetching={isFetching}
+                onRefresh={() => refetch()}
+                className="mb-6"
+            >
                 <div className="flex items-center space-x-2">
                     <Avatar>
                         <AvatarFallback>{customer.owner.charAt(0)}</AvatarFallback>
@@ -158,15 +152,8 @@ export default function DashboardOverviewComponent({ date }: DashboardOverviewPr
                         <p className="text-sm font-medium">{customer.name}</p>
                         <p className="text-xs text-muted-foreground">{meteringPoints.length} Meters</p>
                     </div>
-                    <button
-                        onClick={() => refetch()}
-                        disabled={isRefetching}
-                        className="ml-4 px-3 py-1 text-sm bg-primary text-primary-foreground rounded hover:bg-primary/90 disabled:opacity-50"
-                    >
-                        {isRefetching ? 'Refreshing...' : 'Refresh'}
-                    </button>
                 </div>
-            </div>
+            </RefreshHeader>
 
             {/* Metric Cards */}
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">

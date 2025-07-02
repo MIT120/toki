@@ -1,6 +1,5 @@
 import { PriceRecord } from '../src/types';
 import { downloadFile } from './gcs-client';
-import { getLocalPricesForDate } from './local-data';
 
 function formatDatePath(date: Date): { year: string; month: string; day: string } {
     const year = date.getFullYear().toString();
@@ -30,48 +29,21 @@ export async function getPricesForDate(date: Date): Promise<PriceRecord[]> {
         const { year, month, day } = formatDatePath(date);
         const filePath = `prices/${year}/${month}/${day}.jsonl`;
 
-        console.log(`🔍 Attempting to get prices for ${date.toISOString().split('T')[0]} from GCS`);
+        console.log(`🔍 Getting prices for ${date.toISOString().split('T')[0]} from GCS`);
 
-        // Try GCS first
-        try {
-            const content = await downloadFile(filePath);
+        const content = await downloadFile(filePath);
 
-            if (content && content.trim()) {
-                const prices = parseJsonLines<PriceRecord>(content);
-                console.log(`✅ Using real GCS price data: ${prices.length} records`);
-                return prices.sort((a, b) => a.timestamp - b.timestamp);
-            }
-        } catch (gcsError) {
-            console.log(`⚠️  GCS fetch failed for ${filePath}:`, gcsError instanceof Error ? gcsError.message : String(gcsError));
+        if (!content || !content.trim()) {
+            console.log(`❌ No price data found in GCS for ${date.toISOString().split('T')[0]}`);
+            return [];
         }
 
-        // Fallback to local data
-        console.log(`🔄 GCS data not available, trying local data...`);
-        const localPrices = await getLocalPricesForDate(date);
-
-        if (localPrices.length > 0) {
-            console.log(`✅ Using local price data: ${localPrices.length} records`);
-            return localPrices;
-        }
-
-        console.log(`⚠️  No price data found (GCS or local) for ${date.toISOString().split('T')[0]}`);
-        return [];
+        const prices = parseJsonLines<PriceRecord>(content);
+        console.log(`✅ Using GCS price data: ${prices.length} records`);
+        return prices.sort((a, b) => a.timestamp - b.timestamp);
 
     } catch (error) {
-        console.error(`Failed to fetch prices for date ${date.toISOString()}:`, error);
-
-        // Try local data as final fallback
-        try {
-            console.log(`🔄 Error occurred, trying local data as fallback...`);
-            const localPrices = await getLocalPricesForDate(date);
-            if (localPrices.length > 0) {
-                console.log(`✅ Using local price data after error: ${localPrices.length} records`);
-                return localPrices;
-            }
-        } catch (localError) {
-            console.error('Local data fallback also failed:', localError);
-        }
-
+        console.error(`❌ Failed to fetch prices from GCS for ${date.toISOString().split('T')[0]}:`, error);
         return [];
     }
 }

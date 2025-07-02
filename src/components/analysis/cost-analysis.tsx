@@ -11,6 +11,7 @@ import {
     Zap
 } from 'lucide-react';
 import { useCostAnalysisQuery } from '../../hooks/use-cost-analysis-query';
+import RefreshHeader from '../common/refresh-header';
 import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -135,26 +136,14 @@ export default function CostAnalysisComponent({ meteringPointId, date }: CostAna
 
     return (
         <div className="space-y-6">
-            {/* Header with refresh indicator */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-lg font-semibold">Cost Analysis</h3>
-                    {(isFetching || isRefetching) && (
-                        <div className="flex items-center text-sm text-muted-foreground mt-1">
-                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-muted-foreground border-t-transparent mr-2" />
-                            {isRefetching ? 'Refreshing...' : 'Loading...'}
-                        </div>
-                    )}
-                </div>
-                <Button
-                    onClick={() => refetch()}
-                    disabled={isRefetching}
-                    variant="outline"
-                    size="sm"
-                >
-                    {isRefetching ? 'Refreshing...' : 'Refresh'}
-                </Button>
-            </div>
+            {/* Header with refresh functionality */}
+            <RefreshHeader
+                title="Cost Analysis"
+                subtitle={`Detailed cost breakdown for ${new Date(date).toLocaleDateString()}`}
+                isRefreshing={isRefetching}
+                isFetching={isFetching}
+                onRefresh={() => refetch()}
+            />
 
             <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
                 <Card>

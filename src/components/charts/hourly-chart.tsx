@@ -13,6 +13,7 @@ import {
     YAxis
 } from 'recharts';
 import { useHourlyDataQuery } from '../../hooks/use-hourly-data-query';
+import RefreshHeader from '../common/refresh-header';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -144,26 +145,14 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
 
     return (
         <div className="space-y-4">
-            {/* Header with refresh indicator */}
-            <div className="flex items-center justify-between">
-                <div>
-                    <h3 className="text-lg font-semibold">{title}</h3>
-                    {(isFetching || isRefetching) && (
-                        <div className="flex items-center text-sm text-muted-foreground mt-1">
-                            <div className="animate-spin rounded-full h-3 w-3 border-2 border-muted-foreground border-t-transparent mr-2" />
-                            {isRefetching ? 'Refreshing...' : 'Loading...'}
-                        </div>
-                    )}
-                </div>
-                <Button
-                    onClick={() => refetch()}
-                    disabled={isRefetching}
-                    variant="outline"
-                    size="sm"
-                >
-                    {isRefetching ? 'Refreshing...' : 'Refresh'}
-                </Button>
-            </div>
+            {/* Header with refresh functionality */}
+            <RefreshHeader
+                title={title}
+                subtitle={`Hourly breakdown for ${new Date(date).toLocaleDateString()}`}
+                isRefreshing={isRefetching}
+                isFetching={isFetching}
+                onRefresh={() => refetch()}
+            />
 
             <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 <Card>

@@ -1,6 +1,5 @@
 import { UsageRecord } from '../src/types';
 import { downloadFile } from './gcs-client';
-import { getLocalUsageForMeteringPointAndDate } from './local-data';
 
 function formatDatePath(date: Date): { year: string; month: string; day: string } {
     const year = date.getFullYear().toString();
@@ -30,48 +29,21 @@ export async function getUsageForMeteringPointAndDate(meteringPointId: string, d
         const { year, month, day } = formatDatePath(date);
         const filePath = `usage/${year}/${month}/${day}/${meteringPointId}.jsonl`;
 
-        console.log(`🔍 Attempting to get usage for ${meteringPointId} on ${date.toISOString().split('T')[0]}`);
+        console.log(`🔍 Getting usage for ${meteringPointId} on ${date.toISOString().split('T')[0]} from GCS`);
 
-        // Try GCS first
-        try {
-            const content = await downloadFile(filePath);
+        const content = await downloadFile(filePath);
 
-            if (content && content.trim()) {
-                const usage = parseJsonLines<UsageRecord>(content);
-                console.log(`✅ Using real GCS usage data: ${usage.length} records`);
-                return usage.sort((a, b) => a.timestamp - b.timestamp);
-            }
-        } catch (gcsError) {
-            console.log(`⚠️  GCS fetch failed for ${filePath}:`, gcsError instanceof Error ? gcsError.message : String(gcsError));
+        if (!content || !content.trim()) {
+            console.log(`❌ No usage data found in GCS for ${meteringPointId} on ${date.toISOString().split('T')[0]}`);
+            return [];
         }
 
-        // Fallback to local data
-        console.log(`🔄 GCS data not available, trying local data...`);
-        const localUsage = await getLocalUsageForMeteringPointAndDate(meteringPointId, date);
-
-        if (localUsage.length > 0) {
-            console.log(`✅ Using local usage data: ${localUsage.length} records`);
-            return localUsage;
-        }
-
-        console.log(`⚠️  No usage data found (GCS or local) for ${meteringPointId} on ${date.toISOString().split('T')[0]}`);
-        return [];
+        const usage = parseJsonLines<UsageRecord>(content);
+        console.log(`✅ Using GCS usage data: ${usage.length} records`);
+        return usage.sort((a, b) => a.timestamp - b.timestamp);
 
     } catch (error) {
-        console.error(`Failed to fetch usage for metering point ${meteringPointId} on ${date.toISOString()}:`, error);
-
-        // Try local data as final fallback
-        try {
-            console.log(`🔄 Error occurred, trying local data as fallback...`);
-            const localUsage = await getLocalUsageForMeteringPointAndDate(meteringPointId, date);
-            if (localUsage.length > 0) {
-                console.log(`✅ Using local usage data after error: ${localUsage.length} records`);
-                return localUsage;
-            }
-        } catch (localError) {
-            console.error('Local data fallback also failed:', localError);
-        }
-
+        console.error(`❌ Failed to fetch usage from GCS for ${meteringPointId} on ${date.toISOString().split('T')[0]}:`, error);
         return [];
     }
 }

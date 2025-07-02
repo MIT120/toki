@@ -48,58 +48,6 @@ export async function getElectricityDataForDateRange(
     return data;
 }
 
-// Mock data generator for when real data is missing
-export function generateMockUsageData(meteringPointId: string, date: Date): UsageRecord[] {
-    const baseUsage = meteringPointId === '1234' ? 15 : 12; // Main bakery uses more
-    const mockData: UsageRecord[] = [];
-
-    for (let hour = 0; hour < 24; hour++) {
-        const timestamp = new Date(date);
-        timestamp.setHours(hour, 0, 0, 0);
-
-        // Simulate bakery usage patterns - higher in morning, lower at night
-        let usageMultiplier = 1;
-        if (hour >= 5 && hour <= 10) usageMultiplier = 1.8; // Morning rush
-        else if (hour >= 11 && hour <= 14) usageMultiplier = 1.4; // Lunch prep
-        else if (hour >= 15 && hour <= 18) usageMultiplier = 1.2; // Afternoon
-        else if (hour >= 22 || hour <= 4) usageMultiplier = 0.3; // Night
-        const variance = 0.8 + (Math.random() * 0.4); // Random variance ±20%
-        const kwh = baseUsage * usageMultiplier * variance;
-
-        mockData.push({
-            timestamp: Math.floor(timestamp.getTime() / 1000),
-            kwh: Math.round(kwh * 100) / 100 // Round to 2 decimals
-        });
-    }
-
-    return mockData;
-}
-
-export function generateMockPriceData(date: Date): PriceRecord[] {
-    const mockData: PriceRecord[] = [];
-
-    for (let hour = 0; hour < 24; hour++) {
-        const timestamp = new Date(date);
-        timestamp.setHours(hour, 0, 0, 0);
-
-        // Simulate realistic electricity pricing - higher during peak hours
-        let basePrice = 0.12; // Base price in BGN/kWh
-        if (hour >= 8 && hour <= 10) basePrice = 0.18; // Morning peak
-        else if (hour >= 18 && hour <= 21) basePrice = 0.16; // Evening peak
-        else if (hour >= 22 || hour <= 5) basePrice = 0.08; // Off-peak night
-        const variance = 0.9 + (Math.random() * 0.2); // Small price variance
-        const price = basePrice * variance;
-
-        mockData.push({
-            timestamp: Math.floor(timestamp.getTime() / 1000),
-            price: Math.round(price * 10000) / 10000, // Round to 4 decimals
-            currency: 'BGN'
-        });
-    }
-
-    return mockData;
-}
-
 export async function calculateCostAnalysis(
     meteringPointId: string,
     date: Date
@@ -107,39 +55,17 @@ export async function calculateCostAnalysis(
     try {
         console.log(`📊 Calculating cost analysis for ${meteringPointId} on ${date.toISOString().split('T')[0]}`);
 
-        let usage: UsageRecord[];
-        let prices: PriceRecord[];
-
-        try {
-            // Try to get real data first
-            [usage, prices] = await Promise.all([
-                getUsageForMeteringPointAndDate(meteringPointId, date),
-                getPricesForDate(date)
-            ]);
-
-            // If no real data available, use mock data
-            if (usage.length === 0) {
-                console.log(`⚠️  No usage data found for ${meteringPointId}, using mock data`);
-                usage = generateMockUsageData(meteringPointId, date);
-            }
-
-            if (prices.length === 0) {
-                console.log(`⚠️  No price data found for ${date.toISOString().split('T')[0]}, using mock data`);
-                prices = generateMockPriceData(date);
-            }
-        } catch (error) {
-            console.log(`💥 Error fetching data, using mock data:`, error);
-            // Fall back to mock data if there are any errors
-            usage = generateMockUsageData(meteringPointId, date);
-            prices = generateMockPriceData(date);
-        }
+        const [usage, prices] = await Promise.all([
+            getUsageForMeteringPointAndDate(meteringPointId, date),
+            getPricesForDate(date)
+        ]);
 
         if (usage.length === 0 || prices.length === 0) {
-            console.warn('❌ No usage or price data available (even mock data failed)');
+            console.log(`❌ No GCS data available for ${meteringPointId} on ${date.toISOString().split('T')[0]}`);
             return null;
         }
 
-        console.log(`🔢 Processing ${usage.length} usage records and ${prices.length} price records`);
+        console.log(`🔢 Processing ${usage.length} usage records and ${prices.length} price records from GCS`);
 
         // Create hour-to-price mapping
         const priceMap = new Map<number, number>();
@@ -205,53 +131,76 @@ function generateCostSuggestions(
 ): string[] {
     const suggestions: string[] = [];
 
-    // Find peak usage and high price periods
-    const hourlyUsage = usage.map(u => ({
-        hour: new Date(u.timestamp * 1000).getHours(),
-        kwh: u.kwh
-    }));
+    // Find peak usage hours
+    const usageByHour = new Map<number, number>();
+    for (const record of usage) {
+        const hour = new Date(record.timestamp * 1000).getHours();
+        usageByHour.set(hour, (usageByHour.get(hour) || 0) + record.kwh);
+    }
 
-    const hourlyPrices = prices.map(p => ({
-        hour: new Date(p.timestamp * 1000).getHours(),
-        price: p.price
-    }));
-
-    const maxUsage = Math.max(...hourlyUsage.map(h => h.kwh));
-    const maxPrice = Math.max(...hourlyPrices.map(h => h.price));
+    // Find peak price hours
+    const priceByHour = new Map<number, number>();
+    for (const record of prices) {
+        const hour = new Date(record.timestamp * 1000).getHours();
+        priceByHour.set(hour, record.price);
+    }
 
     // Check for high usage during high price periods
-    const expensiveHours = hourlyPrices.filter(h => h.price > averagePrice * 1.2);
-    const highUsageHours = hourlyUsage.filter(h => h.kwh > maxUsage * 0.7);
+    const highPriceThreshold = averagePrice * 1.2;
+    let highCostHours: number[] = [];
 
-    const overlappingHours = expensiveHours.filter(eh =>
-        highUsageHours.some(uh => uh.hour === eh.hour)
-    );
-
-    if (overlappingHours.length > 0) {
-        const hours = overlappingHours.map(h => `${h.hour}:00`).join(', ');
-        suggestions.push(`High usage during expensive hours: ${hours}. Consider shifting non-essential operations.`);
+    for (const [hour, usage] of usageByHour) {
+        const price = priceByHour.get(hour) || 0;
+        if (price > highPriceThreshold && usage > 0) {
+            highCostHours.push(hour);
+        }
     }
 
-    // Check for overnight usage
-    const nightUsage = hourlyUsage.filter(h => h.hour >= 22 || h.hour <= 5);
-    const avgNightUsage = nightUsage.reduce((sum, h) => sum + h.kwh, 0) / nightUsage.length;
-
-    if (avgNightUsage > maxUsage * 0.3) {
-        suggestions.push('Consider reducing overnight equipment usage to lower baseline consumption.');
+    if (highCostHours.length > 0) {
+        suggestions.push(`Consider reducing usage during high-price hours: ${highCostHours.join(', ')}:00`);
     }
 
-    // Check for morning peak efficiency
-    const morningUsage = hourlyUsage.filter(h => h.hour >= 6 && h.hour <= 10);
-    const avgMorningUsage = morningUsage.reduce((sum, h) => sum + h.kwh, 0) / morningUsage.length;
+    // Find low price periods
+    const lowPriceThreshold = averagePrice * 0.8;
+    let lowPriceHours: number[] = [];
 
-    if (avgMorningUsage > maxUsage * 0.8) {
-        suggestions.push('Morning peak usage is high. Pre-heating equipment during off-peak hours could reduce costs.');
+    for (const [hour, price] of priceByHour) {
+        if (price < lowPriceThreshold) {
+            lowPriceHours.push(hour);
+        }
     }
 
-    // Default suggestion if no specific issues
+    if (lowPriceHours.length > 0) {
+        suggestions.push(`Best times for energy-intensive tasks: ${lowPriceHours.join(', ')}:00 (low prices)`);
+    }
+
+    // Peak usage analysis
+    const maxUsage = Math.max(...Array.from(usageByHour.values()));
+    const peakHours = Array.from(usageByHour.entries())
+        .filter(([_, usage]) => usage === maxUsage)
+        .map(([hour, _]) => hour);
+
+    if (peakHours.length > 0) {
+        suggestions.push(`Peak usage at ${peakHours.join(', ')}:00 - monitor equipment efficiency during these hours`);
+    }
+
+    // Early morning optimization
+    const earlyMorningUsage = Array.from(usageByHour.entries())
+        .filter(([hour, _]) => hour >= 5 && hour <= 8)
+        .reduce((sum, [_, usage]) => sum + usage, 0);
+
+    const earlyMorningPrice = Array.from(priceByHour.entries())
+        .filter(([hour, _]) => hour >= 5 && hour <= 8)
+        .reduce((sum, [_, price]) => sum + price, 0) / 4;
+
+    if (earlyMorningUsage > 0 && earlyMorningPrice < averagePrice) {
+        suggestions.push('Early morning (5-8am) offers good price opportunities for preparation work');
+    }
+
+    // Default suggestion if no specific patterns found
     if (suggestions.length === 0) {
-        suggestions.push('Energy usage patterns look efficient. Monitor for any seasonal changes.');
+        suggestions.push('Monitor usage patterns to identify optimization opportunities');
     }
 
-    return suggestions.slice(0, 3); // Limit to 3 suggestions
+    return suggestions;
 } 

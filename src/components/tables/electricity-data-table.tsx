@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useHourlyDataQuery } from '../../hooks/use-hourly-data-query';
+import RefreshHeader from '../common/refresh-header';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -258,157 +259,133 @@ export default function ElectricityDataTable({
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <div className="flex items-center justify-between">
-                    <div>
-                        <div className="flex items-center gap-3">
-                            <CardTitle>{title}</CardTitle>
-                            {(isFetching || isRefetching) && (
-                                <div className="flex items-center text-sm text-muted-foreground">
-                                    <div className="animate-spin rounded-full h-3 w-3 border-2 border-muted-foreground border-t-transparent mr-2" />
-                                    {isRefetching ? 'Refreshing...' : 'Loading...'}
-                                </div>
-                            )}
+        <div className="space-y-4">
+            {/* Header with refresh functionality */}
+            <RefreshHeader
+                title={title}
+                subtitle={`Data for ${new Date(date).toLocaleDateString()} • ${filteredData.length} of ${rawData.length} hours`}
+                isRefreshing={isRefetching}
+                isFetching={isFetching}
+                onRefresh={() => refetch()}
+            >
+                <Button
+                    onClick={exportToCSV}
+                    variant="outline"
+                    size="sm"
+                    disabled={!filteredData.length}
+                >
+                    <Download className="h-4 w-4 mr-2" />
+                    Export CSV
+                </Button>
+            </RefreshHeader>
+
+            <Card>
+                <CardHeader className="pb-4">
+                    <div className="flex items-center space-x-2">
+                        <div className="relative flex-1 max-w-sm">
+                            <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
+                            <Input
+                                placeholder="Search hours, usage, price, or cost..."
+                                value={searchTerm}
+                                onChange={(e) => setSearchTerm(e.target.value)}
+                                className="pl-8"
+                            />
                         </div>
-                        <CardDescription>
-                            Data for {new Date(date).toLocaleDateString()} • {filteredData.length} of {rawData.length} hours
-                        </CardDescription>
                     </div>
-                    <div className="flex items-center gap-2">
-                        <Button
-                            onClick={() => refetch()}
-                            disabled={isRefetching}
-                            variant="outline"
-                            size="sm"
-                        >
-                            {isRefetching ? 'Refreshing...' : 'Refresh'}
-                        </Button>
-                        <Button
-                            onClick={exportToCSV}
-                            variant="outline"
-                            size="sm"
-                            disabled={!filteredData.length}
-                        >
-                            <Download className="h-4 w-4 mr-2" />
-                            Export CSV
-                        </Button>
+                </CardHeader>
+                <CardContent>
+                    <div className="grid gap-4 md:grid-cols-3 mb-6">
+                        <div className="text-center">
+                            <p className="text-2xl font-bold">{totalUsage.toFixed(1)} kWh</p>
+                            <p className="text-sm text-muted-foreground">Total Usage</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-2xl font-bold">{totalCost.toFixed(2)} BGN</p>
+                            <p className="text-sm text-muted-foreground">Total Cost</p>
+                        </div>
+                        <div className="text-center">
+                            <p className="text-2xl font-bold">{avgPrice.toFixed(4)}</p>
+                            <p className="text-sm text-muted-foreground">Avg Price (BGN/kWh)</p>
+                        </div>
                     </div>
-                </div>
 
-                <div className="flex items-center space-x-2">
-                    <div className="relative flex-1 max-w-sm">
-                        <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
-                        <Input
-                            placeholder="Search hours, usage, price, or cost..."
-                            value={searchTerm}
-                            onChange={(e) => setSearchTerm(e.target.value)}
-                            className="pl-8"
-                        />
-                    </div>
-                </div>
-            </CardHeader>
-            <CardContent>
-                <div className="grid gap-4 md:grid-cols-3 mb-6">
-                    <div className="text-center">
-                        <p className="text-2xl font-bold">{totalUsage.toFixed(1)} kWh</p>
-                        <p className="text-sm text-muted-foreground">Total Usage</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-2xl font-bold">{totalCost.toFixed(2)} BGN</p>
-                        <p className="text-sm text-muted-foreground">Total Cost</p>
-                    </div>
-                    <div className="text-center">
-                        <p className="text-2xl font-bold">{avgPrice.toFixed(4)}</p>
-                        <p className="text-sm text-muted-foreground">Avg Price (BGN/kWh)</p>
-                    </div>
-                </div>
-
-                <div className="rounded-md border">
-                    <Table>
-                        <TableHeader>
-                            <TableRow>
-                                <TableHead
-                                    className="cursor-pointer hover:bg-muted/50"
-                                    onClick={() => handleSort('hour')}
-                                >
-                                    <div className="flex items-center space-x-1">
-                                        <span>Hour</span>
-                                        <SortIcon field="hour" />
-                                    </div>
-                                </TableHead>
-                                <TableHead
-                                    className="cursor-pointer hover:bg-muted/50"
-                                    onClick={() => handleSort('usage')}
-                                >
-                                    <div className="flex items-center space-x-1">
-                                        <span>Usage (kWh)</span>
-                                        <SortIcon field="usage" />
-                                    </div>
-                                </TableHead>
-                                <TableHead
-                                    className="cursor-pointer hover:bg-muted/50"
-                                    onClick={() => handleSort('price')}
-                                >
-                                    <div className="flex items-center space-x-1">
-                                        <span>Price (BGN/kWh)</span>
-                                        <SortIcon field="price" />
-                                    </div>
-                                </TableHead>
-                                <TableHead
-                                    className="cursor-pointer hover:bg-muted/50"
-                                    onClick={() => handleSort('cost')}
-                                >
-                                    <div className="flex items-center space-x-1">
-                                        <span>Cost (BGN)</span>
-                                        <SortIcon field="cost" />
-                                    </div>
-                                </TableHead>
-                                <TableHead>Status</TableHead>
-                            </TableRow>
-                        </TableHeader>
-                        <TableBody>
-                            {filteredData.map((row) => (
-                                <TableRow key={row.hour}>
-                                    <TableCell className="font-medium">
-                                        {formatHour(row.hour)}
-                                    </TableCell>
-                                    <TableCell>{row.usage.toFixed(2)}</TableCell>
-                                    <TableCell>{row.price.toFixed(4)}</TableCell>
-                                    <TableCell>{row.cost.toFixed(2)}</TableCell>
-                                    <TableCell>
-                                        <div className="flex space-x-1">
-                                            <Badge variant={getUsageBadgeColor(row.usage, maxUsage)}>
-                                                {row.usage >= maxUsage * 0.8 ? 'High' :
-                                                    row.usage >= maxUsage * 0.6 ? 'Med' : 'Low'} Usage
-                                            </Badge>
-                                            <Badge variant={getPriceBadgeColor(row.price, avgPrice)}>
-                                                {row.price > avgPrice * 1.2 ? 'High' :
-                                                    row.price > avgPrice * 1.1 ? 'Med' : 'Low'} Price
-                                            </Badge>
+                    <div className="rounded-md border">
+                        <Table>
+                            <TableHeader>
+                                <TableRow>
+                                    <TableHead
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onClick={() => handleSort('hour')}
+                                    >
+                                        <div className="flex items-center space-x-1">
+                                            <span>Hour</span>
+                                            <SortIcon field="hour" />
                                         </div>
-                                    </TableCell>
+                                    </TableHead>
+                                    <TableHead
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onClick={() => handleSort('usage')}
+                                    >
+                                        <div className="flex items-center space-x-1">
+                                            <span>Usage (kWh)</span>
+                                            <SortIcon field="usage" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onClick={() => handleSort('price')}
+                                    >
+                                        <div className="flex items-center space-x-1">
+                                            <span>Price (BGN/kWh)</span>
+                                            <SortIcon field="price" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead
+                                        className="cursor-pointer hover:bg-muted/50"
+                                        onClick={() => handleSort('cost')}
+                                    >
+                                        <div className="flex items-center space-x-1">
+                                            <span>Cost (BGN)</span>
+                                            <SortIcon field="cost" />
+                                        </div>
+                                    </TableHead>
+                                    <TableHead>Status</TableHead>
                                 </TableRow>
-                            ))}
-                        </TableBody>
-                    </Table>
-                </div>
-
-                {filteredData.length === 0 && searchTerm && (
-                    <div className="text-center py-8 text-muted-foreground">
-                        No results found for "{searchTerm}"
-                        <div className="mt-2">
-                            <Button
-                                onClick={() => setSearchTerm('')}
-                                variant="outline"
-                                size="sm"
-                            >
-                                Clear Search
-                            </Button>
-                        </div>
+                            </TableHeader>
+                            <TableBody>
+                                {filteredData.map((row) => (
+                                    <TableRow key={row.hour}>
+                                        <TableCell className="font-medium">
+                                            {formatHour(row.hour)}
+                                        </TableCell>
+                                        <TableCell>{row.usage.toFixed(2)}</TableCell>
+                                        <TableCell>{row.price.toFixed(4)}</TableCell>
+                                        <TableCell>{row.cost.toFixed(2)}</TableCell>
+                                        <TableCell>
+                                            <div className="flex space-x-1">
+                                                <Badge variant={getUsageBadgeColor(row.usage, maxUsage)}>
+                                                    {row.usage >= maxUsage * 0.8 ? 'High' :
+                                                        row.usage >= maxUsage * 0.6 ? 'Med' : 'Low'} Usage
+                                                </Badge>
+                                                <Badge variant={getPriceBadgeColor(row.price, avgPrice)}>
+                                                    {row.price > avgPrice * 1.2 ? 'High' :
+                                                        row.price > avgPrice * 1.1 ? 'Med' : 'Low'} Price
+                                                </Badge>
+                                            </div>
+                                        </TableCell>
+                                    </TableRow>
+                                ))}
+                            </TableBody>
+                        </Table>
                     </div>
-                )}
-            </CardContent>
-        </Card>
+
+                    {filteredData.length === 0 && searchTerm && (
+                        <div className="text-center py-8 text-muted-foreground">
+                            No results found for "{searchTerm}"
+                        </div>
+                    )}
+                </CardContent>
+            </Card>
+        </div>
     );
 } 

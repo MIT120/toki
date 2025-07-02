@@ -35,6 +35,7 @@ export * from './ui/tooltip';
 
 // Common Components
 export { ErrorBoundary, withErrorBoundary } from './common/error-boundary';
+export { default as RefreshHeader } from './common/refresh-header';
 
 // New components
 export { default as Navigation } from './layout/navigation';
