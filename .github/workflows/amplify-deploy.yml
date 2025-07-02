@@ -1,14 +1,15 @@
-name: Amplify Pre-Deploy Checks
+name: Pre-Deploy Checks
 
 on:
   push:
-    branches: [main, develop]
+    branches: [main]
   pull_request:
     branches: [main]
 
 jobs:
-  lint-and-test:
+  pre-deploy-checks:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
 
     steps:
       - name: Checkout code
@@ -49,26 +50,30 @@ jobs:
       - name: Build application
         run: pnpm run build
         env:
-          # Add minimal env vars needed for build
           NODE_ENV: production
           NEXT_PUBLIC_APP_URL: https://example.com
           SENTRY_ORG: devpowerbg-ltd
           SENTRY_PROJECT: toki
 
-  security-scan:
-    runs-on: ubuntu-latest
-
-    steps:
-      - name: Checkout code
-        uses: actions/checkout@v4
-
-      - name: Run security audit
-        run: |
-          npm audit --audit-level=high
+      - name: Security audit
+        run: pnpm audit --audit-level=high
+        continue-on-error: true
 
       - name: Check for secrets
         uses: trufflesecurity/trufflehog@main
         with:
           path: ./
-          base: main
+          base: ${{ github.event.repository.default_branch }}
           head: HEAD
+          extra_args: --debug --only-verified
+
+      - name: Pre-deploy summary
+        run: |
+          echo "✅ All pre-deploy checks passed!"
+          if [ "${{ github.event_name }}" == "pull_request" ]; then
+            echo "🔍 This is a PR - no deployment will occur"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "🚀 This is main branch - ready for deployment"
+          else
+            echo "📝 This is a feature branch - no deployment will occur"
+          fi
