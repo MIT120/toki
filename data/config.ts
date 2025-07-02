@@ -1,11 +1,11 @@
 export const DATA_CONFIG = {
     GCS: {
-        enabled: false,
-        bucketName: 'toki-take-home-data',
+        enabled: true,
+        bucketName: 'toki-take-home.appspot.com',
         keyFilename: './toki-take-home-774e713e21c1.json',
         projectId: 'toki-take-home'
     },
-    DEMO_MODE: true,
+    DEMO_MODE: false,
     DEFAULT_CURRENCY: 'BGN',
     TIMEZONE: 'Europe/Sofia',
     PATHS: {

@@ -49,7 +49,7 @@ export async function getElectricityDataForDateRange(
 }
 
 // Mock data generator for when real data is missing
-function generateMockUsageData(meteringPointId: string, date: Date): UsageRecord[] {
+export function generateMockUsageData(meteringPointId: string, date: Date): UsageRecord[] {
     const baseUsage = meteringPointId === '1234' ? 15 : 12; // Main bakery uses more
     const mockData: UsageRecord[] = [];
 
@@ -63,7 +63,6 @@ function generateMockUsageData(meteringPointId: string, date: Date): UsageRecord
         else if (hour >= 11 && hour <= 14) usageMultiplier = 1.4; // Lunch prep
         else if (hour >= 15 && hour <= 18) usageMultiplier = 1.2; // Afternoon
         else if (hour >= 22 || hour <= 4) usageMultiplier = 0.3; // Night
-
         const variance = 0.8 + (Math.random() * 0.4); // Random variance ±20%
         const kwh = baseUsage * usageMultiplier * variance;
 
@@ -76,7 +75,7 @@ function generateMockUsageData(meteringPointId: string, date: Date): UsageRecord
     return mockData;
 }
 
-function generateMockPriceData(date: Date): PriceRecord[] {
+export function generateMockPriceData(date: Date): PriceRecord[] {
     const mockData: PriceRecord[] = [];
 
     for (let hour = 0; hour < 24; hour++) {
@@ -88,7 +87,6 @@ function generateMockPriceData(date: Date): PriceRecord[] {
         if (hour >= 8 && hour <= 10) basePrice = 0.18; // Morning peak
         else if (hour >= 18 && hour <= 21) basePrice = 0.16; // Evening peak
         else if (hour >= 22 || hour <= 5) basePrice = 0.08; // Off-peak night
-
         const variance = 0.9 + (Math.random() * 0.2); // Small price variance
         const price = basePrice * variance;
 
@@ -107,7 +105,7 @@ export async function calculateCostAnalysis(
     date: Date
 ): Promise<CostAnalysis | null> {
     try {
-        console.log(`Calculating cost analysis for ${meteringPointId} on ${date.toISOString()}`);
+        console.log(`📊 Calculating cost analysis for ${meteringPointId} on ${date.toISOString().split('T')[0]}`);
 
         let usage: UsageRecord[];
         let prices: PriceRecord[];
@@ -121,25 +119,27 @@ export async function calculateCostAnalysis(
 
             // If no real data available, use mock data
             if (usage.length === 0) {
-                console.log(`No usage data found for ${meteringPointId}, using mock data`);
+                console.log(`⚠️  No usage data found for ${meteringPointId}, using mock data`);
                 usage = generateMockUsageData(meteringPointId, date);
             }
 
             if (prices.length === 0) {
-                console.log(`No price data found for ${date.toISOString().split('T')[0]}, using mock data`);
+                console.log(`⚠️  No price data found for ${date.toISOString().split('T')[0]}, using mock data`);
                 prices = generateMockPriceData(date);
             }
         } catch (error) {
-            console.log(`Error fetching real data, using mock data:`, error);
+            console.log(`💥 Error fetching data, using mock data:`, error);
             // Fall back to mock data if there are any errors
             usage = generateMockUsageData(meteringPointId, date);
             prices = generateMockPriceData(date);
         }
 
         if (usage.length === 0 || prices.length === 0) {
-            console.warn('No usage or price data available');
+            console.warn('❌ No usage or price data available (even mock data failed)');
             return null;
         }
+
+        console.log(`🔢 Processing ${usage.length} usage records and ${prices.length} price records`);
 
         // Create hour-to-price mapping
         const priceMap = new Map<number, number>();

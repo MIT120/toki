@@ -3,7 +3,7 @@ description:
 globs: 
 alwaysApply: true
 ---
-# Etokak API Reference Rules
+# Toki API Reference Rules
 
 This document contains the complete API reference for the Etokak platform. Always reference this when working with API integrations.
 

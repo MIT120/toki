@@ -13,10 +13,15 @@ import {
     XAxis,
     YAxis
 } from 'recharts';
-import { HourlyData } from '../../types';
 import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
+interface HourlyData {
+    hour: number;
+    usage: number;
+    price: number;
+    cost: number;
+}
 
 interface HourlyChartProps {
     meteringPointId: string;
@@ -129,43 +134,43 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
 
     return (
         <div className="space-y-4">
-            <div className="grid gap-4 md:grid-cols-4">
+            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
                 <Card>
-                    <CardContent className="flex items-center justify-between p-6">
+                    <CardContent className="flex items-center justify-between p-4 lg:p-6">
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Total Usage</p>
-                            <p className="text-2xl font-bold">{totalUsage.toFixed(1)} kWh</p>
+                            <p className="text-xl lg:text-2xl font-bold">{totalUsage.toFixed(1)} kWh</p>
                         </div>
-                        <Zap className="h-8 w-8 text-blue-500" />
+                        <Zap className="h-6 w-6 lg:h-8 lg:w-8 text-blue-500" />
                     </CardContent>
                 </Card>
 
                 <Card>
-                    <CardContent className="flex items-center justify-between p-6">
+                    <CardContent className="flex items-center justify-between p-4 lg:p-6">
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Total Cost</p>
-                            <p className="text-2xl font-bold">{totalCost.toFixed(2)} BGN</p>
+                            <p className="text-xl lg:text-2xl font-bold">{totalCost.toFixed(2)} BGN</p>
                         </div>
-                        <DollarSign className="h-8 w-8 text-green-500" />
+                        <DollarSign className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
                     </CardContent>
                 </Card>
 
                 <Card>
-                    <CardContent className="flex items-center justify-between p-6">
+                    <CardContent className="flex items-center justify-between p-4 lg:p-6">
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Avg Price</p>
-                            <p className="text-2xl font-bold">{avgPrice.toFixed(4)}</p>
+                            <p className="text-xl lg:text-2xl font-bold">{avgPrice.toFixed(4)}</p>
                             <p className="text-xs text-muted-foreground">BGN/kWh</p>
                         </div>
-                        <TrendingUp className="h-8 w-8 text-orange-500" />
+                        <TrendingUp className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
                     </CardContent>
                 </Card>
 
                 <Card>
-                    <CardContent className="flex items-center justify-between p-6">
+                    <CardContent className="flex items-center justify-between p-4 lg:p-6">
                         <div>
                             <p className="text-sm font-medium text-muted-foreground">Peak Usage</p>
-                            <p className="text-2xl font-bold">{formatHour(peakUsageHour.hour)}</p>
+                            <p className="text-xl lg:text-2xl font-bold">{formatHour(peakUsageHour.hour)}</p>
                             <p className="text-xs text-muted-foreground">{peakUsageHour.usage.toFixed(1)} kWh</p>
                         </div>
                         <Badge variant={peakCostHour.hour === peakUsageHour.hour ? "destructive" : "secondary"}>
@@ -183,65 +188,67 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
-                    <ResponsiveContainer width="100%" height={400}>
-                        <ComposedChart
-                            data={hourlyData}
-                            margin={{
-                                top: 20,
-                                right: 30,
-                                left: 20,
-                                bottom: 5,
-                            }}
-                        >
-                            <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
-                            <XAxis
-                                dataKey="hour"
-                                tickFormatter={formatHour}
-                                className="text-xs"
-                            />
-                            <YAxis
-                                yAxisId="left"
-                                orientation="left"
-                                className="text-xs"
-                            />
-                            <YAxis
-                                yAxisId="right"
-                                orientation="right"
-                                className="text-xs"
-                            />
-                            <Tooltip content={<CustomTooltip />} />
-                            <Legend />
+                    <div className="w-full overflow-x-auto">
+                        <ResponsiveContainer width="100%" height={400} minWidth={300}>
+                            <ComposedChart
+                                data={hourlyData}
+                                margin={{
+                                    top: 20,
+                                    right: 30,
+                                    left: 20,
+                                    bottom: 5,
+                                }}
+                            >
+                                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                                <XAxis
+                                    dataKey="hour"
+                                    tickFormatter={formatHour}
+                                    className="text-xs"
+                                />
+                                <YAxis
+                                    yAxisId="left"
+                                    orientation="left"
+                                    className="text-xs"
+                                />
+                                <YAxis
+                                    yAxisId="right"
+                                    orientation="right"
+                                    className="text-xs"
+                                />
+                                <Tooltip content={<CustomTooltip />} />
+                                <Legend />
 
-                            <Bar
-                                yAxisId="left"
-                                dataKey="usage"
-                                fill="#3B82F6"
-                                name="Usage (kWh)"
-                                opacity={0.7}
-                            />
+                                <Bar
+                                    yAxisId="left"
+                                    dataKey="usage"
+                                    fill="#3B82F6"
+                                    name="Usage (kWh)"
+                                    opacity={0.7}
+                                />
 
-                            <Line
-                                yAxisId="right"
-                                type="monotone"
-                                dataKey="price"
-                                stroke="#F59E0B"
-                                strokeWidth={3}
-                                name="Price (BGN/kWh)"
-                                dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
-                            />
+                                <Line
+                                    yAxisId="right"
+                                    type="monotone"
+                                    dataKey="price"
+                                    stroke="#F59E0B"
+                                    strokeWidth={3}
+                                    name="Price (BGN/kWh)"
+                                    dot={{ fill: '#F59E0B', strokeWidth: 2, r: 4 }}
+                                />
 
-                            <Line
-                                yAxisId="right"
-                                type="monotone"
-                                dataKey="cost"
-                                stroke="#EF4444"
-                                strokeWidth={2}
-                                name="Cost (BGN)"
-                                dot={{ fill: '#EF4444', strokeWidth: 2, r: 3 }}
-                                strokeDasharray="5 5"
-                            />
-                        </ComposedChart>
-                    </ResponsiveContainer>
+                                <Line
+                                    yAxisId="right"
+                                    type="monotone"
+                                    dataKey="cost"
+                                    stroke="#EF4444"
+                                    strokeWidth={2}
+                                    name="Cost (BGN)"
+                                    dot={{ fill: '#EF4444', strokeWidth: 2, r: 3 }}
+                                    strokeDasharray="5 5"
+                                />
+                            </ComposedChart>
+                        </ResponsiveContainer>
+                    </div>
                 </CardContent>
             </Card>
         </div>

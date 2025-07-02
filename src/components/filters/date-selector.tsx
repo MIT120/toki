@@ -12,13 +12,15 @@ interface DateSelectorProps {
     onDateChange: (date: string) => void;
     availableDates?: string[];
     title?: string;
+    isLoading?: boolean;
 }
 
 export default function DateSelector({
     selectedDate,
     onDateChange,
     availableDates = [],
-    title = "Select Date"
+    title = "Select Date",
+    isLoading = false
 }: DateSelectorProps) {
     const [currentDate, setCurrentDate] = useState(selectedDate);
 
@@ -38,6 +40,15 @@ export default function DateSelector({
             year: 'numeric',
             month: 'long',
             day: 'numeric'
+        });
+    };
+
+    const formatDateCompact = (dateStr: string) => {
+        const date = new Date(dateStr);
+        return date.toLocaleDateString('en-US', {
+            month: 'short',
+            day: 'numeric',
+            year: 'numeric'
         });
     };
 
@@ -95,48 +106,62 @@ export default function DateSelector({
     };
 
     return (
-        <Card>
-            <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Calendar className="h-5 w-5" />
+        <Card className="w-full">
+            <CardHeader className="pb-3">
+                <CardTitle className="flex items-center gap-2 text-lg">
+                    <Calendar className="h-5 w-5 text-primary" />
                     {title}
                 </CardTitle>
             </CardHeader>
-            <CardContent className="space-y-4">
-                <div className="flex items-center justify-between">
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDateChange(getDateAdjustment(-1))}
-                        disabled={!canGoToPreviousDay()}
-                    >
-                        <ChevronLeft className="h-4 w-4" />
-                        Previous Day
-                    </Button>
+            <CardContent className="space-y-6">
+                {/* Main Date Display and Navigation */}
+                <div className="space-y-4">
+                    {/* Date Navigation Row */}
+                    <div className="flex items-center justify-between gap-2">
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDateChange(getDateAdjustment(-1))}
+                            disabled={isLoading || !canGoToPreviousDay()}
+                            className="flex items-center gap-1 h-9 px-3"
+                        >
+                            <ChevronLeft className="h-4 w-4" />
+                            <span className="hidden sm:inline">Previous</span>
+                        </Button>
 
-                    <div className="text-center">
-                        <p className="text-lg font-semibold">
-                            {formatDateForDisplay(currentDate)}
-                        </p>
-                        <p className="text-sm text-muted-foreground">
-                            {currentDate}
-                        </p>
+                        <Button
+                            variant="outline"
+                            size="sm"
+                            onClick={() => handleDateChange(getDateAdjustment(1))}
+                            disabled={isLoading || !canGoToNextDay()}
+                            className="flex items-center gap-1 h-9 px-3"
+                        >
+                            <span className="hidden sm:inline">Next</span>
+                            <ChevronRight className="h-4 w-4" />
+                        </Button>
                     </div>
 
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => handleDateChange(getDateAdjustment(1))}
-                        disabled={!canGoToNextDay()}
-                    >
-                        Next Day
-                        <ChevronRight className="h-4 w-4" />
-                    </Button>
+                    {/* Current Date Display */}
+                    <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-4 text-center border border-primary/20">
+                        <div className="space-y-1">
+                            <p className="text-sm font-medium text-primary">Selected Date</p>
+                            <p className="text-lg font-bold text-foreground hidden sm:block">
+                                {formatDateForDisplay(currentDate)}
+                            </p>
+                            <p className="text-lg font-bold text-foreground sm:hidden">
+                                {formatDateCompact(currentDate)}
+                            </p>
+                            <p className="text-xs text-muted-foreground font-mono">
+                                {currentDate}
+                            </p>
+                        </div>
+                    </div>
                 </div>
 
+                {/* Date Input */}
                 <div className="space-y-2">
-                    <label htmlFor="date-input" className="text-sm font-medium">
-                        Select Specific Date:
+                    <label htmlFor="date-input" className="text-sm font-medium text-foreground">
+                        Select Specific Date
                     </label>
                     <Input
                         id="date-input"
@@ -144,12 +169,15 @@ export default function DateSelector({
                         value={formatDateForInput(currentDate)}
                         onChange={(e) => handleDateChange(e.target.value)}
                         max={new Date().toISOString().split('T')[0]}
+                        disabled={isLoading}
+                        className="w-full"
                     />
                 </div>
 
-                <div className="space-y-2">
-                    <p className="text-sm font-medium">Quick Select:</p>
-                    <div className="flex flex-wrap gap-2">
+                {/* Quick Select Options */}
+                <div className="space-y-3">
+                    <p className="text-sm font-medium text-foreground">Quick Select</p>
+                    <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {getQuickDateOptions().map((option) => (
                             <Button
                                 key={option.label}
@@ -157,7 +185,7 @@ export default function DateSelector({
                                 size="sm"
                                 onClick={() => handleDateChange(option.value)}
                                 disabled={!option.available}
-                                className="relative"
+                                className="w-full justify-center relative"
                             >
                                 {option.label}
                                 {!option.available && (
@@ -170,19 +198,41 @@ export default function DateSelector({
                     </div>
                 </div>
 
-                {availableDates.length > 0 && (
-                    <div className="space-y-2">
-                        <p className="text-sm font-medium">Available Dates:</p>
-                        <div className="text-xs text-muted-foreground">
-                            {availableDates.length} date(s) available with data
+                {/* Available Dates */}
+                {isLoading ? (
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-foreground">Available Dates</p>
+                            <Badge variant="secondary" className="text-xs animate-pulse">
+                                Loading...
+                            </Badge>
                         </div>
-                        <div className="max-h-32 overflow-y-auto">
-                            <div className="flex flex-wrap gap-1">
-                                {availableDates.slice(0, 10).map((date) => (
+                        <div className="max-h-32 overflow-y-auto border rounded-md p-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                                {Array.from({ length: 6 }).map((_, index) => (
+                                    <div
+                                        key={index}
+                                        className="h-6 bg-muted rounded animate-pulse"
+                                    />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                ) : availableDates.length > 0 ? (
+                    <div className="space-y-3">
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium text-foreground">Available Dates</p>
+                            <Badge variant="secondary" className="text-xs">
+                                {availableDates.length} available
+                            </Badge>
+                        </div>
+                        <div className="max-h-32 overflow-y-auto border rounded-md p-2">
+                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
+                                {availableDates.slice(0, 12).map((date) => (
                                     <Badge
                                         key={date}
                                         variant={currentDate === date ? "default" : "secondary"}
-                                        className="cursor-pointer text-xs"
+                                        className="cursor-pointer text-xs justify-center hover:bg-primary/20 transition-colors"
                                         onClick={() => handleDateChange(date)}
                                     >
                                         {new Date(date).toLocaleDateString('en-US', {
@@ -191,21 +241,25 @@ export default function DateSelector({
                                         })}
                                     </Badge>
                                 ))}
-                                {availableDates.length > 10 && (
-                                    <Badge variant="outline" className="text-xs">
-                                        +{availableDates.length - 10} more
+                                {availableDates.length > 12 && (
+                                    <Badge variant="outline" className="text-xs justify-center">
+                                        +{availableDates.length - 12}
                                     </Badge>
                                 )}
                             </div>
                         </div>
                     </div>
-                )}
+                ) : null}
 
+                {/* Data Status Indicator */}
                 <div className="pt-2 border-t">
-                    <div className="flex items-center justify-between text-xs text-muted-foreground">
-                        <span>Selected: {currentDate}</span>
-                        <Badge variant={isDateAvailable(currentDate) ? "default" : "destructive"}>
-                            {isDateAvailable(currentDate) ? "Data Available" : "No Data"}
+                    <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Data Status:</span>
+                        <Badge
+                            variant={isDateAvailable(currentDate) ? "default" : "destructive"}
+                            className="text-xs"
+                        >
+                            {isDateAvailable(currentDate) ? "✓ Available" : "✗ No Data"}
                         </Badge>
                     </div>
                 </div>

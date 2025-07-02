@@ -1,75 +1,66 @@
 import { Storage } from '@google-cloud/storage';
-import { DATA_CONFIG } from './config';
+import path from 'path';
 
-let storage: Storage | null = null;
+const storage = new Storage({
+    keyFilename: path.join(process.cwd(), 'toki-take-home-774e713e21c1.json'),
+    projectId: 'toki-take-home'
+});
 
-export function getGCSClient(): Storage {
-    if (!storage && DATA_CONFIG.GCS.enabled) {
-        storage = new Storage({
-            keyFilename: DATA_CONFIG.GCS.keyFilename,
-            projectId: DATA_CONFIG.GCS.projectId
-        });
-    }
-    return storage!;
-}
+// Use the correct bucket name that we found
+const BUCKET_NAME = 'toki-take-home.appspot.com';
+const bucket = storage.bucket(BUCKET_NAME);
 
-export function getBucket() {
-    if (!DATA_CONFIG.GCS.enabled) {
-        return null;
-    }
-    const client = getGCSClient();
-    return client.bucket(DATA_CONFIG.GCS.bucketName);
-}
+console.log(`🔗 GCS Client configured with bucket: ${BUCKET_NAME}`);
 
 export async function downloadFile(filePath: string): Promise<string> {
-    // If GCS is disabled or in demo mode, return empty string immediately
-    if (!DATA_CONFIG.GCS.enabled || DATA_CONFIG.DEMO_MODE) {
-        console.log(`GCS disabled or demo mode - using mock data for: ${filePath}`);
-        return '';
-    }
-
     try {
-        const bucket = getBucket();
-        if (!bucket) {
-            return '';
-        }
+        console.log(`📥 Downloading: ${filePath} from bucket: ${BUCKET_NAME}`);
 
         const file = bucket.file(filePath);
-
         const [exists] = await file.exists();
+
         if (!exists) {
-            console.warn(`File not found: ${filePath}`);
-            return '';
+            console.log(`❌ File not found: ${filePath}`);
+            throw new Error(`File not found: ${filePath}`);
         }
 
-        const [content] = await file.download();
-        return content.toString('utf-8');
+        const [contents] = await file.download();
+        const content = contents.toString('utf-8');
+
+        console.log(`✅ Downloaded ${content.length} characters from ${filePath}`);
+        return content;
+
     } catch (error) {
-        console.warn(`Failed to download file ${filePath}:`, error);
-        return '';
+        console.error(`💥 Error downloading ${filePath}:`, error);
+        throw error;
     }
 }
 
-export function parseJsonLines<T>(content: string): T[] {
-    if (!content || content.trim() === '') {
-        return [];
-    }
-
+export async function fileExists(filePath: string): Promise<boolean> {
     try {
-        return content
-            .split('\n')
-            .filter(line => line.trim())
-            .map(line => JSON.parse(line) as T);
+        const file = bucket.file(filePath);
+        const [exists] = await file.exists();
+        return exists;
     } catch (error) {
-        console.warn('Failed to parse JSON Lines data:', error);
+        console.error(`Error checking file existence: ${filePath}`, error);
+        return false;
+    }
+}
+
+export async function listFiles(prefix: string): Promise<string[]> {
+    try {
+        console.log(`📋 Listing files with prefix: ${prefix}`);
+
+        const [files] = await bucket.getFiles({ prefix });
+        const fileNames = files.map(file => file.name);
+
+        console.log(`📊 Found ${fileNames.length} files with prefix: ${prefix}`);
+        return fileNames;
+
+    } catch (error) {
+        console.error(`Error listing files with prefix ${prefix}:`, error);
         return [];
     }
 }
 
-export function formatDatePath(date: Date): { year: string; month: string; day: string } {
-    const year = date.getFullYear().toString();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-
-    return { year, month, day };
-} 
+export { bucket };

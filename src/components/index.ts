@@ -33,3 +33,7 @@ export * from './ui/table';
 export * from './ui/tabs';
 export * from './ui/tooltip';
 
+// New components
+export { default as Navigation } from './layout/navigation';
+export { default as GCSStatus } from './status/gcs-status';
+

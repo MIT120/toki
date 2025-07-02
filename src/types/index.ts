@@ -1,11 +1,3 @@
-export interface Config {
-    pricesApiUrl: string;
-    dataStoragePath: string;
-    outputPath: string;
-    currency: string;
-    timezone: string;
-}
-
 export interface PriceRecord {
     timestamp: number;
     price: number;
@@ -15,23 +7,6 @@ export interface PriceRecord {
 export interface UsageRecord {
     timestamp: number;
     kwh: number;
-}
-
-export interface Customer {
-    name: string;
-    owner: string;
-    meteringPoints: string[];
-}
-
-export interface MeteringPoint {
-    id: string;
-    name?: string;
-    location?: string;
-}
-
-export interface DateRange {
-    startDate: Date;
-    endDate: Date;
 }
 
 export interface ElectricityData {
@@ -52,60 +27,17 @@ export interface CostAnalysis {
     suggestions: string[];
 }
 
-export interface DataFetchOptions {
-    meteringPointId?: string;
-    startDate?: Date;
-    endDate?: Date;
-    includeAnalysis?: boolean;
+export interface Customer {
+    name: string;
+    owner: string;
+    meteringPoints: string[];
 }
 
-export interface DailySummary {
-    date: string;
-    totalKwh: number;
-    totalCost: number;
-    averagePrice: number;
-    peakUsageHour: number;
-    suggestions: string[];
-}
-
-export interface WeeklySummary {
-    weekStartDate: string;
-    weekEndDate: string;
-    totalKwh: number;
-    totalCost: number;
-    averagePrice: number;
-    dailySummaries: DailySummary[];
-    weeklyInsights: string[];
-}
-
-export interface MonthlySummary {
-    month: string;
-    year: number;
-    totalKwh: number;
-    totalCost: number;
-    averagePrice: number;
-    costSavingsOpportunity: number;
-    monthlySuggestions: string[];
-}
-
-export interface DashboardOverview {
-    customer: {
-        name: string;
-        owner: string;
-    };
-    meteringPoints: MeteringPoint[];
-    todayData: {
-        totalKwh: number;
-        totalCost: number;
-        averagePrice: number;
-        activeMeters: number;
-    };
-    recentInsights: string[];
-    quickStats: {
-        highestCostMeter: string;
-        peakUsageHour: number;
-        potentialSavingsToday: number;
-    };
+export interface MeteringPoint {
+    id: string;
+    name: string;
+    location?: string;
+    customerId?: string;
 }
 
 export interface HourlyData {
@@ -115,18 +47,66 @@ export interface HourlyData {
     cost: number;
 }
 
-export interface RealTimeInsights {
-    meteringPointId: string;
-    currentHour: number;
-    currentUsage: number;
-    currentPrice: number;
-    currentCost: number;
-    recommendation: string;
-    urgencyLevel: 'low' | 'medium' | 'high';
+export interface DailyAnalytics {
+    date: string;
+    totalUsage: number;
+    totalCost: number;
+    averagePrice: number;
+    peakHour: number;
+    offPeakHour: number;
 }
 
-export interface ServiceResponse<T> {
-    success: boolean;
-    data?: T;
-    error?: string;
+export interface WeeklyAnalytics {
+    weekStart: string;
+    weekEnd: string;
+    totalUsage: number;
+    totalCost: number;
+    averagePrice: number;
+    dailyBreakdown: DailyAnalytics[];
 }
+
+export interface MonthlyAnalytics {
+    month: string;
+    year: number;
+    totalUsage: number;
+    totalCost: number;
+    averagePrice: number;
+    weeklyBreakdown: WeeklyAnalytics[];
+}
+
+export interface InsightData {
+    meteringPointId: string;
+    date: string;
+    insights: {
+        highUsagePeriods: Array<{
+            hour: number;
+            usage: number;
+            cost: number;
+        }>;
+        lowCostOpportunities: Array<{
+            hour: number;
+            potentialSavings: number;
+            recommendation: string;
+        }>;
+        trends: {
+            usageTrend: 'increasing' | 'decreasing' | 'stable';
+            costTrend: 'increasing' | 'decreasing' | 'stable';
+            efficiency: number;
+        };
+    };
+}
+
+export interface DashboardData {
+    totalMeteringPoints: number;
+    totalUsage: number;
+    totalCost: number;
+    averagePrice: number;
+    meteringPoints: Array<{
+        id: string;
+        name: string;
+        todayUsage: number;
+        todayCost: number;
+        status: 'normal' | 'high' | 'alert';
+    }>;
+    recentAnalytics: DailyAnalytics[];
+} 
