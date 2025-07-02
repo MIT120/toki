@@ -16,7 +16,7 @@ dist/
 
 # TypeScript
 *.tsbuildinfo
-lib/
+/lib/
 
 # Environment variables
 .env
@@ -117,6 +117,7 @@ data/*.json
 !firebase.json
 !firestore.*.json
 !.eslintrc.json
+!components.json
 
 # Vercel
 .vercel
