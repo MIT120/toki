@@ -14,16 +14,6 @@ frontend:
         # Ensure postbuild script ran (it should run automatically)
         - echo "Postbuild script should have run, verifying..."
         - ls -la .next/standalone/data/translations/ || echo "Files not found in standalone"
-        # Manual copy as backup (in case postbuild doesn't run)
-        - echo "Manual backup copy of translation files..."
-        - mkdir -p .next/standalone/data/translations
-        - cp -r data/translations/* .next/standalone/data/translations/
-        # Also copy to server directory for API routes
-        - mkdir -p .next/server/data/translations
-        - cp -r data/translations/* .next/server/data/translations/
-        # Copy to root of build for additional safety
-        - mkdir -p .next/data/translations
-        - cp -r data/translations/* .next/data/translations/
         # Verify all copies
         - echo "Verifying translation files in build..."
         - ls -la .next/standalone/data/translations/en/ || echo "No standalone files"
