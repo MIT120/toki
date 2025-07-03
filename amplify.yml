@@ -11,10 +11,35 @@ frontend:
       commands:
         # Build the application
         - pnpm run build
-        # Copy translation files to standalone build
+        # Copy translation files to standalone build (with fallback)
         - echo "Copying translation files to standalone build..."
         - mkdir -p .next/standalone/data
-        - cp -r data/translations .next/standalone/data/
+        - |
+          if [ -d "data/translations" ]; then
+            echo "Translation files found, copying..."
+            cp -r data/translations .next/standalone/data/
+            echo "Translation files copied successfully"
+          else
+            echo "Warning: Translation files not found in data/translations"
+            echo "Checking if they exist elsewhere..."
+            find . -name "translations" -type d
+          fi
+        # Verify translation files are available
+        - echo "Verifying translation files in standalone build..."
+        - |
+          if [ -d ".next/standalone/data/translations" ]; then
+            echo "✅ Translation files found in standalone build"
+            echo "Available locales:"
+            ls -la .next/standalone/data/translations/
+            echo "English translations:"
+            ls -la .next/standalone/data/translations/en/ | head -5
+            echo "Bulgarian translations:"
+            ls -la .next/standalone/data/translations/bg/ | head -5
+          else
+            echo "❌ Translation files not found in standalone build"
+            echo "Contents of .next/standalone/data/:"
+            ls -la .next/standalone/data/
+          fi
         # Clean up build to reduce size
         - echo "Cleaning up build to reduce size..."
         - rm -rf .next/cache
