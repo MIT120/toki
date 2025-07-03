@@ -1,21 +1,14 @@
 import { translationConfig } from '@/config/translation-config'
-import { Locale, TranslationError, TranslationNamespace } from '@/types/translation'
+import { Locale, TranslationNamespace } from '@/types/translation'
 import fs from 'fs'
 import path from 'path'
 
 // Fallback translations loader - for when files are not accessible in runtime
 const loadFallbackTranslation = async (locale: Locale, namespace: string): Promise<any> => {
-    try {
-        // For production environments, use absolute imports from the data directory
-        // This path should work in most Next.js build environments
-        const translationModule = await import(`../../../data/translations/${locale}/${namespace}.json`)
-        return translationModule.default || translationModule
-    } catch (error) {
-        console.error(`Failed to load fallback translation for ${locale}/${namespace}:`, error)
-
-        // If dynamic import fails, use hardcoded fallback
-        return await loadHardcodedFallback(locale, namespace)
-    }
+    // In production serverless environments, we can't reliably use dynamic imports
+    // So we'll use only hardcoded fallbacks
+    console.warn(`Using hardcoded fallback translation for ${locale}.${namespace}`)
+    return await loadHardcodedFallback(locale, namespace)
 }
 
 // Hardcoded fallback for critical translations
@@ -169,10 +162,17 @@ class TranslationService {
         try {
             // Try multiple possible paths for different deployment environments
             const possiblePaths = [
+                // Standard development paths
                 path.join(process.cwd(), 'data', 'translations', locale, `${namespace}.json`),
+                // Production serverless paths (from build output)
                 path.join(process.cwd(), '.next', 'standalone', 'translations', locale, `${namespace}.json`),
                 path.join(process.cwd(), '.next', 'server', 'data', 'translations', locale, `${namespace}.json`),
                 path.join(process.cwd(), '.next', 'standalone', 'data', 'translations', locale, `${namespace}.json`),
+                // Additional serverless paths (from production error logs)
+                path.join('/tmp/app', 'translations', locale, `${namespace}.json`),
+                path.join('/tmp/app', '.next', 'standalone', 'translations', locale, `${namespace}.json`),
+                path.join('/tmp/app', 'data', 'translations', locale, `${namespace}.json`),
+                // Relative paths from current file location
                 path.join(__dirname, '..', '..', '..', 'data', 'translations', locale, `${namespace}.json`),
                 path.join(__dirname, '..', '..', 'data', 'translations', locale, `${namespace}.json`),
             ]
@@ -212,16 +212,15 @@ class TranslationService {
                     console.error('Fallback translation import failed:', fallbackError)
                 }
 
-                // Log all attempted paths for debugging
-                console.error('Translation file not found. Attempted paths:', possiblePaths)
-                console.error('Current working directory:', process.cwd())
-                console.error('__dirname:', __dirname)
-
-                throw new TranslationError(
-                    `Translation file not found: ${namespace}.json for locale ${locale}`,
-                    'FILE_NOT_FOUND',
-                    { locale, namespace, attemptedPaths: possiblePaths, cwd: process.cwd() }
-                )
+                // If everything fails, return empty translations to prevent API failure
+                console.warn(`No translations available for ${locale}.${namespace}, returning empty translations`)
+                return {
+                    locale,
+                    namespace,
+                    translations: {},
+                    version: '1.0.0-empty',
+                    lastModified: new Date()
+                }
             }
 
             const fileContent = await fs.promises.readFile(filePath, 'utf-8')
@@ -235,15 +234,30 @@ class TranslationService {
                 lastModified: new Date()
             }
         } catch (error) {
-            if (error instanceof TranslationError) {
-                throw error
-            }
+            // Never throw errors - always return fallback translations
+            console.error(`Error loading translations for ${locale}/${namespace}:`, error)
 
-            throw new TranslationError(
-                `Failed to load translations for ${locale}/${namespace}`,
-                'LOAD_ERROR',
-                { locale, namespace, originalError: error }
-            )
+            // Try hardcoded fallback as last resort
+            try {
+                const fallbackTranslations = await loadHardcodedFallback(locale, namespace)
+                return {
+                    locale,
+                    namespace,
+                    translations: fallbackTranslations,
+                    version: '1.0.0-error-fallback',
+                    lastModified: new Date()
+                }
+            } catch (fallbackError) {
+                // Even if hardcoded fallback fails, return empty translations
+                console.error(`Hardcoded fallback failed for ${locale}/${namespace}:`, fallbackError)
+                return {
+                    locale,
+                    namespace,
+                    translations: {},
+                    version: '1.0.0-empty-fallback',
+                    lastModified: new Date()
+                }
+            }
         }
     }
 
