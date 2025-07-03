@@ -11,17 +11,20 @@ frontend:
       commands:
         # Build the application
         - pnpm run build
-        # Ensure postbuild script ran (it should run automatically)
-        - echo "Postbuild script should have run, verifying..."
-        - ls -la .next/standalone/data/translations/ || echo "Files not found in standalone"
-        # Verify all copies
-        - echo "Verifying translation files in build..."
-        - ls -la .next/standalone/data/translations/en/ || echo "No standalone files"
-        - ls -la .next/server/data/translations/en/ || echo "No server files"
-        - ls -la .next/data/translations/en/ || echo "No root files"
-        - echo "Translation files setup complete!"
+        # Copy translation files to standalone build
+        - echo "Copying translation files to standalone build..."
+        - mkdir -p .next/standalone/data
+        - cp -r data/translations .next/standalone/data/
+        # Clean up build to reduce size
+        - echo "Cleaning up build to reduce size..."
+        - rm -rf .next/cache
+        - rm -rf .next/static/chunks/webpack*.js
+        - find .next -name "*.map" -delete
+        - echo "Build size after cleanup:"
+        - du -sh .next/standalone/
+        - echo "Build complete!"
   artifacts:
-    baseDirectory: .next
+    baseDirectory: .next/standalone
     files:
       - "**/*"
     name: toki-build

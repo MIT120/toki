@@ -14,10 +14,17 @@ class TranslationService {
         const response = await fetch(`/api/translations/${locale}/${namespace}`)
 
         if (!response.ok) {
-            throw new Error(`Failed to fetch translations for ${locale}/${namespace}: ${response.status}`)
+            const errorData = await response.json().catch(() => ({}))
+            throw new Error(`Translation not found for ${locale}/${namespace}: ${response.status}${errorData.error ? ` - ${errorData.error}` : ''}`)
         }
 
-        const translations = await response.json()
+        const data = await response.json()
+        const translations = data.translations
+
+        if (!translations) {
+            throw new Error(`Invalid translation response for ${locale}/${namespace}`)
+        }
+
         this.cache.set(cacheKey, translations)
         return translations
     }

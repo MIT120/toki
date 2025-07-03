@@ -2,7 +2,6 @@ import { TranslationConfig } from '@/types/translation'
 
 export const translationConfig: TranslationConfig = {
     defaultLocale: 'en',
-    fallbackLocale: 'en',
     supportedLocales: ['en', 'bg'],
     cacheExpiry: 1000 * 60 * 30, // 30 minutes
 }

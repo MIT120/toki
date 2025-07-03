@@ -3,8 +3,24 @@ const nextConfig = {
     output: 'standalone',
     trailingSlash: true,
     skipTrailingSlashRedirect: true,
+    productionBrowserSourceMaps: false,
     images: {
         unoptimized: true
+    },
+    compiler: {
+        removeConsole: process.env.NODE_ENV === 'production',
+    },
+    experimental: {
+        outputFileTracingExcludes: {
+            '*': [
+                'node_modules/@swc/core-linux-x64-gnu',
+                'node_modules/@swc/core-linux-x64-musl',
+                'node_modules/@esbuild/linux-x64',
+            ],
+        },
+        outputFileTracingIncludes: {
+            '/api/translations/[locale]/[namespace]': ['./data/translations/**/*'],
+        },
     },
     async rewrites() {
         return [

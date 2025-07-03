@@ -71,23 +71,13 @@ export function useTranslation(namespace: string = 'common'): TranslationHookRet
     const t = useCallback((key: string, interpolations?: Record<string, any>): string => {
         const cachedData = cache[cacheKey]
         if (!cachedData) {
-            return key // Return key if no translations loaded yet
+            throw new Error(`Translations not loaded for ${locale}.${namespace}`)
         }
 
-        let value = getNestedValue(cachedData.translations, key)
-
-        // Fallback to default locale if translation not found
-        if (!value && locale !== translationConfig.fallbackLocale) {
-            const fallbackKey = `${translationConfig.fallbackLocale}.${namespace}`
-            const fallbackData = cache[fallbackKey]
-            if (fallbackData) {
-                value = getNestedValue(fallbackData.translations, key)
-            }
-        }
+        const value = getNestedValue(cachedData.translations, key)
 
         if (!value) {
-            console.warn(`Translation missing: ${locale}.${namespace}.${key}`)
-            return key
+            throw new Error(`Translation missing: ${locale}.${namespace}.${key}`)
         }
 
         return interpolate(value, interpolations)

@@ -10,7 +10,6 @@ export interface TranslationNamespace {
 
 export interface TranslationConfig {
     defaultLocale: Locale
-    fallbackLocale: Locale
     supportedLocales: Locale[]
     cacheExpiry: number
 }
