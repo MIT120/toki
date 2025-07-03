@@ -149,33 +149,10 @@ export async function GET(
         const result = await loadTranslationFile(locale, namespace);
 
         if (!result) {
-            // If primary locale fails, try fallback locale
-            if (locale !== translationConfig.fallbackLocale) {
-                console.log(`🔄 Trying fallback locale: ${translationConfig.fallbackLocale}`);
-                const fallbackResult = await loadTranslationFile(translationConfig.fallbackLocale, namespace);
-
-                if (fallbackResult) {
-                    const duration = Date.now() - startTime;
-                    console.log(`✅ Loaded fallback translations from: ${fallbackResult.filePath} (${duration}ms)`);
-                    return NextResponse.json({
-                        locale: translationConfig.fallbackLocale,
-                        requestedLocale: locale,
-                        namespace,
-                        translations: fallbackResult.data,
-                        fallback: true,
-                        version: '1.0.0',
-                        lastModified: new Date(),
-                        filePath: fallbackResult.filePath,
-                        loadTime: duration
-                    });
-                }
-            }
-
             return NextResponse.json(
                 {
                     error: `Translation file not found for ${locale}/${namespace}`,
                     supportedLocales: translationConfig.supportedLocales,
-                    fallbackAttempted: locale !== translationConfig.fallbackLocale,
                     environment: process.env.NODE_ENV || 'unknown',
                     platform: process.env.VERCEL ? 'vercel' : process.env.AWS_REGION ? 'aws' : 'unknown'
                 },

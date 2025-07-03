@@ -58,6 +58,9 @@ export function TranslationProvider({ children, initialLocale }: TranslationProv
         }
 
         try {
+            setIsLoading(true)
+            setError(null)
+
             const response = await fetch(`/api/translations/${targetLocale}/${namespace}`)
             if (!response.ok) {
                 throw new Error(`Failed to fetch translations: ${response.status}`)
@@ -75,8 +78,12 @@ export function TranslationProvider({ children, initialLocale }: TranslationProv
 
             return data.translations
         } catch (err) {
-            console.error(`Failed to load translations for ${targetLocale}/${namespace}:`, err)
-            return null
+            const error = err as Error
+            setError(error)
+            console.error(`Failed to load translations for ${targetLocale}/${namespace}:`, error)
+            throw error
+        } finally {
+            setIsLoading(false)
         }
     }, [cache])
 
@@ -109,21 +116,9 @@ export function TranslationProvider({ children, initialLocale }: TranslationProv
             }
         }
 
-        // Fallback to default locale if translation not found
-        if (locale !== translationConfig.fallbackLocale) {
-            const fallbackKey = `${translationConfig.fallbackLocale}.common`
-            const fallbackData = cache[fallbackKey]
-            if (fallbackData) {
-                let value = getNestedValue(fallbackData.translations, key)
-                if (value) {
-                    return interpolate(value, interpolations)
-                }
-            }
-        }
-
         // If still not found, attempt to load common translations
         if (!commonData) {
-            loadTranslations(locale, 'common')
+            loadTranslations(locale, 'common').catch(console.error)
         }
 
         return key
@@ -131,6 +126,7 @@ export function TranslationProvider({ children, initialLocale }: TranslationProv
 
     const refresh = useCallback(async (): Promise<void> => {
         setIsLoading(true)
+        setError(null)
         try {
             setCache({}) // Clear cache
             await loadTranslations(locale, 'common') // Reload common translations
@@ -154,7 +150,7 @@ export function TranslationProvider({ children, initialLocale }: TranslationProv
 
     // Load common translations when locale changes
     useEffect(() => {
-        loadTranslations(locale, 'common')
+        loadTranslations(locale, 'common').catch(console.error)
     }, [locale, loadTranslations])
 
     const contextValue: TranslationContextValue = {
