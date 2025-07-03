@@ -6,6 +6,7 @@
   "scripts": {
     "dev": "next dev",
     "build": "next build",
+    "postbuild": "cp -r data .next/standalone/ || xcopy data .next\\standalone\\ /E /I || echo 'Translation files copy completed'",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",

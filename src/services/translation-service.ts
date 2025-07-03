@@ -3,6 +3,18 @@ import { Locale, TranslationError, TranslationNamespace } from '@/types/translat
 import fs from 'fs'
 import path from 'path'
 
+// Fallback translations loader - for when files are not accessible in runtime
+const loadFallbackTranslation = async (locale: Locale, namespace: string): Promise<any> => {
+    try {
+        // Dynamic import for production fallback
+        const module = await import(`../../../data/translations/${locale}/${namespace}.json`)
+        return module.default || module
+    } catch (error) {
+        console.error(`Failed to load fallback translation for ${locale}/${namespace}:`, error)
+        return null
+    }
+}
+
 class TranslationService {
     private cache = new Map<string, TranslationNamespace>()
     private loadPromises = new Map<string, Promise<TranslationNamespace>>()
@@ -35,13 +47,54 @@ class TranslationService {
 
     private async loadTranslationsFromFile(locale: Locale, namespace: string): Promise<TranslationNamespace> {
         try {
-            const filePath = path.join(process.cwd(), 'data', 'translations', locale, `${namespace}.json`)
+            // Try multiple possible paths for different deployment environments
+            const possiblePaths = [
+                path.join(process.cwd(), 'data', 'translations', locale, `${namespace}.json`),
+                path.join(process.cwd(), '.next', 'server', 'data', 'translations', locale, `${namespace}.json`),
+                path.join(process.cwd(), '.next', 'standalone', 'data', 'translations', locale, `${namespace}.json`),
+                path.join(__dirname, '..', '..', '..', 'data', 'translations', locale, `${namespace}.json`),
+                path.join(__dirname, '..', '..', 'data', 'translations', locale, `${namespace}.json`),
+            ]
 
-            if (!fs.existsSync(filePath)) {
+            let filePath: string | null = null
+            let fileExists = false
+
+            // Find the first existing path
+            for (const possiblePath of possiblePaths) {
+                if (fs.existsSync(possiblePath)) {
+                    filePath = possiblePath
+                    fileExists = true
+                    break
+                }
+            }
+
+            if (!fileExists || !filePath) {
+                // Try fallback import
+                console.warn(`Using fallback translation for ${locale}.${namespace}`)
+                try {
+                    const translations = await loadFallbackTranslation(locale, namespace)
+                    if (translations) {
+                        return {
+                            locale,
+                            namespace,
+                            translations,
+                            version: '1.0.0',
+                            lastModified: new Date()
+                        }
+                    }
+                } catch (fallbackError) {
+                    console.error('Fallback translation import failed:', fallbackError)
+                }
+
+                // Log all attempted paths for debugging
+                console.error('Translation file not found. Attempted paths:', possiblePaths)
+                console.error('Current working directory:', process.cwd())
+                console.error('__dirname:', __dirname)
+
                 throw new TranslationError(
-                    `Translation file not found: ${filePath}`,
+                    `Translation file not found: ${namespace}.json for locale ${locale}`,
                     'FILE_NOT_FOUND',
-                    { locale, namespace, filePath }
+                    { locale, namespace, attemptedPaths: possiblePaths, cwd: process.cwd() }
                 )
             }
 

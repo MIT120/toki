@@ -5,6 +5,11 @@ const nextConfig = {
     images: {
         unoptimized: true
     },
+    experimental: {
+        outputFileTracingIncludes: {
+            '/api/**/*': ['./data/**/*'],
+        },
+    },
     async rewrites() {
         return [
             {
