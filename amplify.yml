@@ -24,6 +24,16 @@ frontend:
             echo "Checking if they exist elsewhere..."
             find . -name "translations" -type d
           fi
+        # Copy static files for standalone build
+        - echo "Setting up standalone build structure..."
+        - cp -r .next/static .next/standalone/.next/
+        - |
+          if [ -d "public" ]; then
+            echo "Copying public directory..."
+            cp -r public .next/standalone/
+          else
+            echo "No public directory found, skipping..."
+          fi
         # Verify translation files are available
         - echo "Verifying translation files in standalone build..."
         - |
@@ -40,10 +50,26 @@ frontend:
             echo "Contents of .next/standalone/data/:"
             ls -la .next/standalone/data/
           fi
+        # Verify standalone build structure
+        - echo "Verifying standalone build structure..."
+        - ls -la .next/standalone/
+        - |
+          if [ -f ".next/standalone/server.js" ]; then
+            echo "✅ server.js found"
+          else
+            echo "❌ server.js not found"
+          fi
+        - |
+          if [ -f ".next/standalone/.next/required-server-files.json" ]; then
+            echo "✅ required-server-files.json found"
+          else
+            echo "❌ required-server-files.json not found"
+            echo "Contents of .next/standalone/.next/:"
+            ls -la .next/standalone/.next/ || echo "Directory doesn't exist"
+          fi
         # Clean up build to reduce size
         - echo "Cleaning up build to reduce size..."
         - rm -rf .next/cache
-        - rm -rf .next/static/chunks/webpack*.js
         - find .next -name "*.map" -delete
         - echo "Build size after cleanup:"
         - du -sh .next/standalone/
@@ -57,26 +83,3 @@ frontend:
     paths:
       - node_modules/**/*
       - .next/cache/**/*
-  customHeaders:
-    - pattern: "**/*"
-      headers:
-        - key: "Strict-Transport-Security"
-          value: "max-age=31536000; includeSubDomains"
-        - key: "X-Content-Type-Options"
-          value: "nosniff"
-        - key: "X-Frame-Options"
-          value: "DENY"
-        - key: "X-XSS-Protection"
-          value: "1; mode=block"
-        - key: "Referrer-Policy"
-          value: "strict-origin-when-cross-origin"
-        - key: "Cache-Control"
-          value: "public, max-age=31536000, immutable"
-    - pattern: "/api/translations/**/*"
-      headers:
-        - key: "Cache-Control"
-          value: "public, max-age=1800, stale-while-revalidate=3600"
-        - key: "Access-Control-Allow-Origin"
-          value: "*"
-        - key: "Access-Control-Allow-Methods"
-          value: "GET"
