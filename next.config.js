@@ -1,6 +1,5 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    output: 'standalone',
     productionBrowserSourceMaps: false,
     // Removed static export configs that interfere with SSR
     async rewrites() {

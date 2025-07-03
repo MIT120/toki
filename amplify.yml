@@ -11,11 +11,7 @@ frontend:
   artifacts:
     baseDirectory: ./
     files:
-      - ".next/**/*"
-      - "public/**/*"
-      - "package.json"
-      - "next.config.js"
-      - "customHttp.yml"
+      - "**/*"
   cache:
     paths:
       - node_modules/**/*
