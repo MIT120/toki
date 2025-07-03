@@ -152,7 +152,7 @@ describe('Electricity Calculations', () => {
             test('should convert timestamp to date correctly', () => {
                 const result = timestampToDate(1651050000);
                 expect(result).toBeInstanceOf(Date);
-                expect(result.getHours()).toBe(12); // Actual hour in current timezone
+                expect(result.getUTCHours()).toBe(9); // Timestamp 1651050000 = 2022-04-27 09:00:00 UTC
             });
 
             test('should handle zero timestamp', () => {

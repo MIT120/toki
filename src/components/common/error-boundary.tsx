@@ -44,7 +44,7 @@ export class ErrorBoundary extends Component<Props, State> {
                 action: 'componentDidCatch',
                 ...context,
                 additionalData: {
-                    componentStack: errorInfo.componentStack,
+                    componentStack: errorInfo.componentStack || 'Unknown component stack',
                     errorBoundary: true,
                 },
             },
