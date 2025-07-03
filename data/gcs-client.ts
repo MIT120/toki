@@ -1,21 +1,19 @@
 import { Storage } from '@google-cloud/storage';
 import path from 'path';
 
-// For Amplify/cloud deployment, use environment variables instead of key file
 const storage = new Storage({
-    projectId: process.env.GOOGLE_CLOUD_PROJECT_ID || 'toki-take-home',
+    projectId: process.env.NEXT_PUBLIC_GOOGLE_CLOUD_PROJECT_ID || 'toki-take-home',
     keyFilename: process.env.NODE_ENV === 'production' ? undefined : path.join(process.cwd(), 'toki-take-home-774e713e21c1.json'),
     credentials: process.env.NODE_ENV === 'production' ? {
-        client_email: process.env.GOOGLE_CLOUD_CLIENT_EMAIL,
-        private_key: process.env.GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n'),
+        client_email: process.env.NEXT_PUBLIC_GOOGLE_CLOUD_CLIENT_EMAIL,
+        private_key: process.env.NEXT_PUBLIC_GOOGLE_CLOUD_PRIVATE_KEY?.replace(/\\n/g, '\n'),
     } : undefined,
 });
 
-// Use the correct bucket name that we found
-const BUCKET_NAME = 'toki-take-home.appspot.com';
+const BUCKET_NAME = process.env.NEXT_PUBLIC_GOOGLE_CLOUD_STORAGE_BUCKET || 'toki-take-home.appspot.com';
 const bucket = storage.bucket(BUCKET_NAME);
 
-console.log(`🔗 GCS Client configured with bucket: ${BUCKET_NAME}${process.env.NODE_ENV === 'production' ? ' (using environment variables)' : ' (using key file)'}`);
+console.log(`🔗 GCS Client configured with bucket: ${BUCKET_NAME}`);
 
 export async function downloadFile(filePath: string): Promise<string> {
     try {
