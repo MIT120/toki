@@ -170,6 +170,7 @@ class TranslationService {
             // Try multiple possible paths for different deployment environments
             const possiblePaths = [
                 path.join(process.cwd(), 'data', 'translations', locale, `${namespace}.json`),
+                path.join(process.cwd(), '.next', 'standalone', 'translations', locale, `${namespace}.json`),
                 path.join(process.cwd(), '.next', 'server', 'data', 'translations', locale, `${namespace}.json`),
                 path.join(process.cwd(), '.next', 'standalone', 'data', 'translations', locale, `${namespace}.json`),
                 path.join(__dirname, '..', '..', '..', 'data', 'translations', locale, `${namespace}.json`),
