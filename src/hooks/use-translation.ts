@@ -15,12 +15,17 @@ interface TranslationCache {
 export function useTranslation(namespace: string = 'common'): TranslationHookReturn {
     const { locale, setLocale } = useLocale()
     const [cache, setCache] = useState<TranslationCache>({})
-    const [isLoading, setIsLoading] = useState(true)
+    const [isLoading, setIsLoading] = useState(false)
     const [error, setError] = useState<Error | null>(null)
 
     const cacheKey = `${locale}.${namespace}`
 
     const fetchTranslations = useCallback(async () => {
+        // Don't fetch during SSR
+        if (typeof window === 'undefined') {
+            return
+        }
+
         try {
             setIsLoading(true)
             setError(null)
@@ -69,21 +74,32 @@ export function useTranslation(namespace: string = 'common'): TranslationHookRet
     }
 
     const t = useCallback((key: string, interpolations?: Record<string, any>): string => {
+        // During SSR, return the key as placeholder
+        if (typeof window === 'undefined') {
+            return key
+        }
+
         const cachedData = cache[cacheKey]
         if (!cachedData) {
-            throw new Error(`Translations not loaded for ${locale}.${namespace}`)
+            // If no translations loaded yet, return key as placeholder
+            return key
         }
 
         const value = getNestedValue(cachedData.translations, key)
 
         if (!value) {
-            throw new Error(`Translation missing: ${locale}.${namespace}.${key}`)
+            console.warn(`Translation missing: ${locale}.${namespace}.${key}`)
+            return key
         }
 
         return interpolate(value, interpolations)
     }, [cache, cacheKey, locale, namespace])
 
     const refresh = useCallback(async () => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
         setCache(prev => {
             const updated = { ...prev }
             delete updated[cacheKey]
@@ -93,7 +109,10 @@ export function useTranslation(namespace: string = 'common'): TranslationHookRet
     }, [cacheKey, fetchTranslations])
 
     useEffect(() => {
-        fetchTranslations()
+        // Only fetch on client side
+        if (typeof window !== 'undefined') {
+            fetchTranslations()
+        }
     }, [fetchTranslations])
 
     return {
