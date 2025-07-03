@@ -7,11 +7,6 @@ frontend:
         - npm install -g pnpm@10.4.1
         # Install dependencies
         - pnpm install --frozen-lockfile
-        # Verify translation files exist
-        - echo "Checking translation files..."
-        - ls -la data/translations/
-        - ls -la data/translations/en/
-        - ls -la data/translations/bg/
     build:
       commands:
         # Build the application
