@@ -7,10 +7,28 @@ import path from 'path'
 const loadFallbackTranslation = async (locale: Locale, namespace: string): Promise<any> => {
     try {
         // Dynamic import for production fallback
-        const module = await import(`../../../data/translations/${locale}/${namespace}.json`)
-        return module.default || module
+        const translationModule = await import(`../../../data/translations/${locale}/${namespace}.json`)
+        return translationModule.default || translationModule
     } catch (error) {
         console.error(`Failed to load fallback translation for ${locale}/${namespace}:`, error)
+
+        // Try alternative import paths for different build environments
+        const alternativePaths = [
+            `../../data/translations/${locale}/${namespace}.json`,
+            `../../../../data/translations/${locale}/${namespace}.json`,
+            `./data/translations/${locale}/${namespace}.json`
+        ]
+
+        for (const altPath of alternativePaths) {
+            try {
+                const altModule = await import(altPath)
+                return altModule.default || altModule
+            } catch (altError) {
+                // Continue to next path
+                continue
+            }
+        }
+
         return null
     }
 }

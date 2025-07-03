@@ -8,6 +8,7 @@ const nextConfig = {
     experimental: {
         outputFileTracingIncludes: {
             '/api/**/*': ['./data/**/*'],
+            '/': ['./data/translations/**/*'],
         },
     },
     async rewrites() {
