@@ -114,7 +114,16 @@ class ErrorLogger {
     }
 
     private handleUnhandledRejection(event: PromiseRejectionEvent | any) {
-        const error = event.reason instanceof Error ? event.reason : new Error(String(event.reason));
+        // Handle undefined or null event.reason gracefully
+        let error: Error;
+        if (event && event.reason instanceof Error) {
+            error = event.reason;
+        } else if (event && event.reason !== undefined && event.reason !== null) {
+            error = new Error(String(event.reason));
+        } else {
+            error = new Error('Unknown promise rejection');
+        }
+
         this.logError(error, {
             level: 'error',
             context: {

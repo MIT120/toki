@@ -1,7 +1,8 @@
 import { translationConfig } from '@/config/translation-config';
-import { getTranslations } from '@/services/translation-service';
 import { Locale } from '@/types/translation';
+import fs from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
+import path from 'path';
 
 export async function GET(
     request: NextRequest,
@@ -24,9 +25,52 @@ export async function GET(
             )
         }
 
-        const translations = await getTranslations(locale as Locale, namespace)
+        // Try multiple possible paths for different deployment environments
+        const possiblePaths = [
+            // Standard development path
+            path.join(process.cwd(), 'data', 'translations', locale, `${namespace}.json`),
+            // Production serverless paths
+            path.join(process.cwd(), '.next', 'standalone', 'data', 'translations', locale, `${namespace}.json`),
+            path.join(process.cwd(), '.next', 'standalone', 'translations', locale, `${namespace}.json`),
+            // Additional serverless paths
+            path.join('/tmp/app', 'data', 'translations', locale, `${namespace}.json`),
+            path.join('/tmp/app', '.next', 'standalone', 'data', 'translations', locale, `${namespace}.json`),
+            path.join('/tmp/app', '.next', 'standalone', 'translations', locale, `${namespace}.json`),
+        ]
 
-        const response = NextResponse.json(translations)
+        let translationData = null
+        let filePath = null
+
+        // Find the first existing file
+        for (const possiblePath of possiblePaths) {
+            try {
+                if (fs.existsSync(possiblePath)) {
+                    const fileContent = fs.readFileSync(possiblePath, 'utf-8')
+                    translationData = JSON.parse(fileContent)
+                    filePath = possiblePath
+                    break
+                }
+            } catch (error) {
+                // Continue to next path if this one fails
+                continue
+            }
+        }
+
+        if (!translationData) {
+            return NextResponse.json(
+                { error: `Translation file not found for ${locale}/${namespace}` },
+                { status: 404 }
+            )
+        }
+
+        // Return the translation data with metadata
+        const response = NextResponse.json({
+            locale,
+            namespace,
+            translations: translationData,
+            version: '1.0.0',
+            lastModified: new Date()
+        })
 
         response.headers.set('Cache-Control', 'public, max-age=1800, stale-while-revalidate=3600')
 
