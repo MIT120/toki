@@ -6,31 +6,133 @@ import path from 'path'
 // Fallback translations loader - for when files are not accessible in runtime
 const loadFallbackTranslation = async (locale: Locale, namespace: string): Promise<any> => {
     try {
-        // Dynamic import for production fallback
+        // For production environments, use absolute imports from the data directory
+        // This path should work in most Next.js build environments
         const translationModule = await import(`../../../data/translations/${locale}/${namespace}.json`)
         return translationModule.default || translationModule
     } catch (error) {
         console.error(`Failed to load fallback translation for ${locale}/${namespace}:`, error)
 
-        // Try alternative import paths for different build environments
-        const alternativePaths = [
-            `../../data/translations/${locale}/${namespace}.json`,
-            `../../../../data/translations/${locale}/${namespace}.json`,
-            `./data/translations/${locale}/${namespace}.json`
-        ]
-
-        for (const altPath of alternativePaths) {
-            try {
-                const altModule = await import(altPath)
-                return altModule.default || altModule
-            } catch (altError) {
-                // Continue to next path
-                continue
-            }
-        }
-
-        return null
+        // If dynamic import fails, use hardcoded fallback
+        return await loadHardcodedFallback(locale, namespace)
     }
+}
+
+// Hardcoded fallback for critical translations
+const loadHardcodedFallback = async (locale: Locale, namespace: string): Promise<any> => {
+    // Return basic fallback translations for critical namespaces
+    const fallbackTranslations: Record<string, any> = {
+        common: {
+            buttons: {
+                refresh: locale === 'en' ? 'Refresh' : 'Обнови',
+                export: locale === 'en' ? 'Export' : 'Експорт',
+                save: locale === 'en' ? 'Save' : 'Запиши',
+                cancel: locale === 'en' ? 'Cancel' : 'Отказ',
+                confirm: locale === 'en' ? 'Confirm' : 'Потвърди',
+                delete: locale === 'en' ? 'Delete' : 'Изтрий',
+                edit: locale === 'en' ? 'Edit' : 'Редактирай',
+                view: locale === 'en' ? 'View' : 'Преглед',
+                loadMore: locale === 'en' ? 'Load More' : 'Зареди още',
+                retry: locale === 'en' ? 'Retry' : 'Опитай отново'
+            },
+            labels: {
+                loading: locale === 'en' ? 'Loading...' : 'Зареждане...',
+                noData: locale === 'en' ? 'No Data Available' : 'Няма налични данни',
+                error: locale === 'en' ? 'Error' : 'Грешка',
+                success: locale === 'en' ? 'Success' : 'Успех',
+                warning: locale === 'en' ? 'Warning' : 'Предупреждение',
+                info: locale === 'en' ? 'Information' : 'Информация',
+                language: locale === 'en' ? 'Language' : 'Език',
+                lastUpdated: locale === 'en' ? 'Last updated' : 'Последно обновено',
+                searchPlaceholder: locale === 'en' ? 'Search...' : 'Търси...'
+            },
+            units: {
+                kWh: 'kWh',
+                bgn: 'BGN',
+                hours: locale === 'en' ? 'hours' : 'часа',
+                minutes: locale === 'en' ? 'minutes' : 'минути',
+                percent: '%',
+                bgnPerKwh: 'BGN/kWh'
+            }
+        },
+        charts: {
+            labels: {
+                consumption: locale === 'en' ? 'Consumption' : 'Потребление',
+                cost: locale === 'en' ? 'Cost' : 'Стойност',
+                time: locale === 'en' ? 'Time' : 'Време',
+                noData: locale === 'en' ? 'No data available' : 'Няма налични данни',
+                hourlyConsumption: locale === 'en' ? 'Hourly Consumption' : 'Почасово потребление',
+                totalCost: locale === 'en' ? 'Total Cost' : 'Обща стойност'
+            }
+        },
+        dashboard: {
+            title: locale === 'en' ? 'Dashboard' : 'Табло',
+            labels: {
+                overview: locale === 'en' ? 'Overview' : 'Преглед',
+                totalConsumption: locale === 'en' ? 'Total Consumption' : 'Общо потребление',
+                totalCost: locale === 'en' ? 'Total Cost' : 'Обща стойност',
+                averageConsumption: locale === 'en' ? 'Average Consumption' : 'Средно потребление',
+                peakConsumption: locale === 'en' ? 'Peak Consumption' : 'Пиково потребление'
+            }
+        },
+        tables: {
+            headers: {
+                date: locale === 'en' ? 'Date' : 'Дата',
+                consumption: locale === 'en' ? 'Consumption' : 'Потребление',
+                cost: locale === 'en' ? 'Cost' : 'Стойност',
+                time: locale === 'en' ? 'Time' : 'Време'
+            },
+            actions: {
+                view: locale === 'en' ? 'View' : 'Преглед',
+                export: locale === 'en' ? 'Export' : 'Експорт'
+            }
+        },
+        errors: {
+            general: locale === 'en' ? 'An error occurred' : 'Възникна грешка',
+            network: locale === 'en' ? 'Network connection error' : 'Грешка в мрежовата връзка',
+            notFound: locale === 'en' ? 'Data not found' : 'Данните не са намерени',
+            serverError: locale === 'en' ? 'Server error' : 'Сървърна грешка'
+        },
+        navigation: {
+            menu: {
+                dashboard: locale === 'en' ? 'Dashboard' : 'Табло',
+                analytics: locale === 'en' ? 'Analytics' : 'Анализи',
+                settings: locale === 'en' ? 'Settings' : 'Настройки'
+            }
+        },
+        filters: {
+            dates: {
+                today: locale === 'en' ? 'Today' : 'Днес',
+                yesterday: locale === 'en' ? 'Yesterday' : 'Вчера',
+                thisWeek: locale === 'en' ? 'This Week' : 'Тази седмица',
+                thisMonth: locale === 'en' ? 'This Month' : 'Този месец'
+            }
+        },
+        analytics: {
+            insights: {
+                title: locale === 'en' ? 'Insights' : 'Анализи',
+                consumption: locale === 'en' ? 'Consumption Analysis' : 'Анализ на потреблението',
+                cost: locale === 'en' ? 'Cost Analysis' : 'Анализ на разходите'
+            }
+        },
+        insights: {
+            recommendations: {
+                title: locale === 'en' ? 'Recommendations' : 'Препоръки',
+                optimize: locale === 'en' ? 'Optimize Usage' : 'Оптимизирай употребата'
+            }
+        },
+        analysis: {
+            title: locale === 'en' ? 'Analysis' : 'Анализ',
+            costBreakdown: locale === 'en' ? 'Cost Breakdown' : 'Разбивка на разходите',
+            consumptionTrends: locale === 'en' ? 'Consumption Trends' : 'Тенденции в потреблението'
+        },
+        page: {
+            title: locale === 'en' ? 'Electricity Data' : 'Електрически данни',
+            description: locale === 'en' ? 'View and analyze your electricity consumption' : 'Преглед и анализ на вашето електропотребление'
+        }
+    }
+
+    return fallbackTranslations[namespace] || {}
 }
 
 class TranslationService {
@@ -79,10 +181,15 @@ class TranslationService {
 
             // Find the first existing path
             for (const possiblePath of possiblePaths) {
-                if (fs.existsSync(possiblePath)) {
-                    filePath = possiblePath
-                    fileExists = true
-                    break
+                try {
+                    if (fs.existsSync(possiblePath)) {
+                        filePath = possiblePath
+                        fileExists = true
+                        break
+                    }
+                } catch (error) {
+                    // Continue to next path if fs access fails
+                    continue
                 }
             }
 
@@ -91,12 +198,12 @@ class TranslationService {
                 console.warn(`Using fallback translation for ${locale}.${namespace}`)
                 try {
                     const translations = await loadFallbackTranslation(locale, namespace)
-                    if (translations) {
+                    if (translations && Object.keys(translations).length > 0) {
                         return {
                             locale,
                             namespace,
                             translations,
-                            version: '1.0.0',
+                            version: '1.0.0-fallback',
                             lastModified: new Date()
                         }
                     }
