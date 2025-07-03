@@ -8,6 +8,7 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useHourlyDataQuery } from '../../hooks/use-hourly-data-query';
+import { useTranslation } from '../../hooks/use-translation';
 import {
     calculateTotalCost,
     calculateTotalUsage,
@@ -43,6 +44,9 @@ export default function ElectricityDataTable({
     date,
     title = "Hourly Electricity Data"
 }: ElectricityDataTableProps) {
+    const { t } = useTranslation('tables');
+    const { t: tCommon } = useTranslation('common');
+
     const {
         data: rawData,
         isLoading,
@@ -207,6 +211,8 @@ export default function ElectricityDataTable({
             <ChevronDown className="h-4 w-4" />;
     };
 
+    const defaultTitle = title || t('electricity.title');
+
     return (
         <QueryStateWrapper
             isLoading={isLoading}
@@ -219,11 +225,11 @@ export default function ElectricityDataTable({
             isFetching={isFetching}
             errorTitle="Error Loading Electricity Data"
             noDataTitle="No Data Available"
-            noDataMessage={`No electricity data available for ${new Date(date).toLocaleDateString()}`}
+            noDataMessage={t('electricity.noResults', { searchTerm })}
             loadingComponent={loadingComponent}
         >
             <ElectricityDataTableContent
-                title={title}
+                title={defaultTitle}
                 date={date}
                 rawData={rawData!}
                 filteredData={filteredData}
@@ -245,8 +251,6 @@ export default function ElectricityDataTable({
     );
 }
 
-
-
 function ElectricityDataTableContent({
     title,
     date,
@@ -266,6 +270,9 @@ function ElectricityDataTableContent({
     onSearchChange,
     onExportCSV
 }: ElectricityDataTableContentProps) {
+    const { t } = useTranslation('tables');
+    const { t: tCommon } = useTranslation('common');
+
     const SortIcon = ({ field }: { field: SortField }) => {
         if (sortField !== field) return null;
         return sortDirection === 'asc' ?
@@ -291,7 +298,11 @@ function ElectricityDataTableContent({
             {/* Header with refresh functionality */}
             <RefreshHeader
                 title={title}
-                subtitle={`Data for ${new Date(date).toLocaleDateString()} • ${filteredData.length} of ${rawData.length} hours`}
+                subtitle={t('electricity.dataFor', {
+                    date: new Date(date).toLocaleDateString(),
+                    count: filteredData.length,
+                    total: rawData.length
+                })}
                 isRefreshing={isRefetching}
                 isFetching={isFetching}
                 onRefresh={onRefetch}
@@ -303,7 +314,7 @@ function ElectricityDataTableContent({
                     disabled={!filteredData.length}
                 >
                     <Download className="h-4 w-4 mr-2" />
-                    Export CSV
+                    {t('electricity.exportCSV')}
                 </Button>
             </RefreshHeader>
 
@@ -313,7 +324,7 @@ function ElectricityDataTableContent({
                         <div className="relative flex-1 max-w-sm">
                             <Search className="absolute left-2 top-2.5 h-4 w-4 text-muted-foreground" />
                             <Input
-                                placeholder="Search hours, usage, price, or cost..."
+                                placeholder={t('electricity.searchPlaceholder')}
                                 value={searchTerm}
                                 onChange={(e) => onSearchChange(e.target.value)}
                                 className="pl-8"
@@ -324,16 +335,16 @@ function ElectricityDataTableContent({
                 <CardContent>
                     <div className="grid gap-4 md:grid-cols-3 mb-6">
                         <div className="text-center">
-                            <p className="text-2xl font-bold">{roundUsage(totalUsage)} kWh</p>
-                            <p className="text-sm text-muted-foreground">Total Usage</p>
+                            <p className="text-2xl font-bold">{roundUsage(totalUsage)} {tCommon('units.kWh')}</p>
+                            <p className="text-sm text-muted-foreground">{t('electricity.totalUsage')}</p>
                         </div>
                         <div className="text-center">
-                            <p className="text-2xl font-bold">{roundCurrency(totalCost)} BGN</p>
-                            <p className="text-sm text-muted-foreground">Total Cost</p>
+                            <p className="text-2xl font-bold">{roundCurrency(totalCost)} {tCommon('units.bgn')}</p>
+                            <p className="text-sm text-muted-foreground">{t('electricity.totalCost')}</p>
                         </div>
                         <div className="text-center">
                             <p className="text-2xl font-bold">{roundPrice(avgPrice)}</p>
-                            <p className="text-sm text-muted-foreground">Avg Price (BGN/kWh)</p>
+                            <p className="text-sm text-muted-foreground">{t('electricity.avgPrice')}</p>
                         </div>
                     </div>
 
@@ -346,7 +357,7 @@ function ElectricityDataTableContent({
                                         onClick={() => onSort('hour')}
                                     >
                                         <div className="flex items-center space-x-1">
-                                            <span>Hour</span>
+                                            <span>{t('electricity.hour')}</span>
                                             <SortIcon field="hour" />
                                         </div>
                                     </TableHead>
@@ -355,7 +366,7 @@ function ElectricityDataTableContent({
                                         onClick={() => onSort('usage')}
                                     >
                                         <div className="flex items-center space-x-1">
-                                            <span>Usage (kWh)</span>
+                                            <span>{t('electricity.usage')}</span>
                                             <SortIcon field="usage" />
                                         </div>
                                     </TableHead>
@@ -364,7 +375,7 @@ function ElectricityDataTableContent({
                                         onClick={() => onSort('price')}
                                     >
                                         <div className="flex items-center space-x-1">
-                                            <span>Price (BGN/kWh)</span>
+                                            <span>{t('electricity.price')}</span>
                                             <SortIcon field="price" />
                                         </div>
                                     </TableHead>
@@ -373,11 +384,11 @@ function ElectricityDataTableContent({
                                         onClick={() => onSort('cost')}
                                     >
                                         <div className="flex items-center space-x-1">
-                                            <span>Cost (BGN)</span>
+                                            <span>{t('electricity.cost')}</span>
                                             <SortIcon field="cost" />
                                         </div>
                                     </TableHead>
-                                    <TableHead>Status</TableHead>
+                                    <TableHead>{t('electricity.status')}</TableHead>
                                 </TableRow>
                             </TableHeader>
                             <TableBody>
@@ -392,12 +403,12 @@ function ElectricityDataTableContent({
                                         <TableCell>
                                             <div className="flex space-x-1">
                                                 <Badge variant={getUsageBadgeColor(row.usage, maxUsage)}>
-                                                    {row.usage >= maxUsage * 0.8 ? 'High' :
-                                                        row.usage >= maxUsage * 0.6 ? 'Med' : 'Low'} Usage
+                                                    {row.usage >= maxUsage * 0.8 ? t('electricity.usageStatus.high') :
+                                                        row.usage >= maxUsage * 0.6 ? t('electricity.usageStatus.med') : t('electricity.usageStatus.low')}
                                                 </Badge>
                                                 <Badge variant={getPriceBadgeColor(row.price, avgPrice)}>
-                                                    {row.price > avgPrice * 1.2 ? 'High' :
-                                                        row.price > avgPrice * 1.1 ? 'Med' : 'Low'} Price
+                                                    {row.price > avgPrice * 1.2 ? t('electricity.priceStatus.high') :
+                                                        row.price > avgPrice * 1.1 ? t('electricity.priceStatus.med') : t('electricity.priceStatus.low')}
                                                 </Badge>
                                             </div>
                                         </TableCell>
@@ -409,7 +420,7 @@ function ElectricityDataTableContent({
 
                     {filteredData.length === 0 && searchTerm && (
                         <div className="text-center py-8 text-muted-foreground">
-                            No results found for "{searchTerm}"
+                            {t('electricity.noResults', { searchTerm })}
                         </div>
                     )}
                 </CardContent>

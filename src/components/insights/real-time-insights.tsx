@@ -171,34 +171,34 @@ function RealTimeInsightsContent({
                     {/* Today's Totals */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg">Today's Summary</CardTitle>
+                            <CardTitle className="text-lg">{t('summaries.todayTitle')}</CardTitle>
                         </CardHeader>
                         <CardContent>
                             <div className="grid gap-4 md:grid-cols-2">
                                 <div className="flex items-center justify-between p-4 rounded-lg border">
                                     <div>
-                                        <p className="text-sm text-muted-foreground">Total Usage Today</p>
-                                        <p className="text-xl font-bold">{roundUsage(insights.todayTotal?.usage || 0)} kWh</p>
+                                        <p className="text-sm text-muted-foreground">{t('summaries.totalUsageToday')}</p>
+                                        <p className="text-xl font-bold">{roundUsage(insights.todayTotal?.usage || 0)} {tCommon('units.kWh')}</p>
                                         <p className="text-xs text-muted-foreground">
-                                            {(insights.trends?.usageChange || 0) > 0 ? '+' : ''}{roundUsage(insights.trends?.usageChange || 0)}% vs yesterday
+                                            {(insights.trends?.usageChange || 0) > 0 ? '+' : ''}{roundUsage(insights.trends?.usageChange || 0)}{tCommon('units.percent')} {t('summaries.vsYesterday')}
                                         </p>
                                     </div>
                                     <StatusBadge
                                         status={(insights.trends?.usageChange || 0) > 10 ? "high" : (insights.trends?.usageChange || 0) > 0 ? "medium" : "low"}
-                                        label={(insights.trends?.usageChange || 0) > 10 ? "High" : (insights.trends?.usageChange || 0) > 0 ? "Above" : "Normal"}
+                                        label={(insights.trends?.usageChange || 0) > 10 ? t('status.high') : (insights.trends?.usageChange || 0) > 0 ? t('status.above') : t('status.normal')}
                                     />
                                 </div>
                                 <div className="flex items-center justify-between p-4 rounded-lg border">
                                     <div>
-                                        <p className="text-sm text-muted-foreground">Total Cost Today</p>
-                                        <p className="text-xl font-bold">{roundCurrency(insights.todayTotal?.cost || 0)} BGN</p>
+                                        <p className="text-sm text-muted-foreground">{t('summaries.totalCostToday')}</p>
+                                        <p className="text-xl font-bold">{roundCurrency(insights.todayTotal?.cost || 0)} {tCommon('units.bgn')}</p>
                                         <p className="text-xs text-muted-foreground">
-                                            {(insights.trends?.costChange || 0) > 0 ? '+' : ''}{roundCurrency(insights.trends?.costChange || 0)}% vs yesterday
+                                            {(insights.trends?.costChange || 0) > 0 ? '+' : ''}{roundCurrency(insights.trends?.costChange || 0)}{tCommon('units.percent')} {t('summaries.vsYesterday')}
                                         </p>
                                     </div>
                                     <StatusBadge
                                         status={(insights.trends?.costChange || 0) > 10 ? "high" : (insights.trends?.costChange || 0) > 0 ? "medium" : "low"}
-                                        label={(insights.trends?.costChange || 0) > 10 ? "High" : (insights.trends?.costChange || 0) > 0 ? "Above" : "Normal"}
+                                        label={(insights.trends?.costChange || 0) > 10 ? t('status.high') : (insights.trends?.costChange || 0) > 0 ? t('status.above') : t('status.normal')}
                                     />
                                 </div>
                             </div>
@@ -208,35 +208,36 @@ function RealTimeInsightsContent({
                     {/* Recommendations using RecommendationsList */}
                     <RecommendationsList
                         recommendations={insights.recommendations || []}
-                        title="Smart Recommendations"
-                        description="AI-powered suggestions based on your current usage patterns"
-                        emptyMessage="Your current usage is optimized! No immediate recommendations."
+                        titleKey="recommendations.title"
+                        descriptionKey="recommendations.description"
+                        emptyMessageKey="recommendations.emptyMessage"
+                        namespace="insights"
                     />
 
                     {/* Efficiency Score */}
                     <Card>
                         <CardHeader>
-                            <CardTitle className="text-lg">Efficiency Score</CardTitle>
+                            <CardTitle className="text-lg">{t('efficiency.title')}</CardTitle>
                             <CardDescription>
-                                Your real-time energy efficiency rating
+                                {t('efficiency.description')}
                             </CardDescription>
                         </CardHeader>
                         <CardContent>
                             <div className="space-y-4">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Current Efficiency</span>
+                                    <span className="text-sm font-medium">{t('metrics.currentEfficiency')}</span>
                                     <StatusBadge
                                         status={(insights.trends?.efficiencyScore || 0) >= 80 ? "good" : (insights.trends?.efficiencyScore || 0) >= 60 ? "medium" : "warning"}
-                                        label={`${roundToDecimals(insights.trends?.efficiencyScore || 0, 0)}%`}
+                                        label={`${roundToDecimals(insights.trends?.efficiencyScore || 0, 0)}${tCommon('units.percent')}`}
                                     />
                                 </div>
                                 <Progress value={insights.trends?.efficiencyScore || 0} className="h-3" />
                                 <p className="text-xs text-muted-foreground">
                                     {(insights.trends?.efficiencyScore || 0) >= 80 ?
-                                        "Excellent! Your energy usage is highly optimized." :
+                                        t('efficiency.excellent') :
                                         (insights.trends?.efficiencyScore || 0) >= 60 ?
-                                            "Good efficiency with room for improvement." :
-                                            "Consider implementing the recommendations above to improve efficiency."
+                                            t('efficiency.good') :
+                                            t('efficiency.needsImprovement')
                                     }
                                 </p>
                             </div>
