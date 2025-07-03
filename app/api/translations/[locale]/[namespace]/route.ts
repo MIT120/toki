@@ -4,55 +4,31 @@ import fs from 'fs';
 import { NextRequest, NextResponse } from 'next/server';
 import path from 'path';
 
-// Comprehensive path resolution for different deployment environments
+// Build-time paths only - translations are built into .next folder
 function getTranslationFilePaths(locale: string, namespace: string): string[] {
     const fileName = `${namespace}.json`;
 
     return [
-        // Local development
-        path.join(process.cwd(), 'data', 'translations', locale, fileName),
-
-        // AWS Amplify specific paths
+        // AWS Amplify runtime paths (built output)
         path.join(process.cwd(), '.next', 'standalone', 'data', 'translations', locale, fileName),
         path.join(process.cwd(), '.next', 'server', 'data', 'translations', locale, fileName),
-        path.join(process.cwd(), '.next', 'server', 'chunks', 'data', 'translations', locale, fileName),
+        path.join(process.cwd(), '.next', 'data', 'translations', locale, fileName),
 
-        // Amplify build artifacts
-        path.join('/tmp', 'amplify', 'backend', 'data', 'translations', locale, fileName),
-        path.join('/tmp', 'amplify', 'data', 'translations', locale, fileName),
-
-        // Standard Amplify paths
-        path.join('/opt', 'amplify', 'data', 'translations', locale, fileName),
-        path.join('/opt', 'nodejs', 'data', 'translations', locale, fileName),
-
-        // Vercel deployment paths (fallback)
-        path.join(process.cwd(), '.next', 'standalone', 'data', 'translations', locale, fileName),
-        path.join(process.cwd(), '.next', 'server', 'data', 'translations', locale, fileName),
-
-        // Docker/containerized deployments
-        path.join('/app', 'data', 'translations', locale, fileName),
-        path.join('/app', '.next', 'standalone', 'data', 'translations', locale, fileName),
-
-        // Lambda/serverless function paths
-        path.join('/tmp', 'app', 'data', 'translations', locale, fileName),
-        path.join('/tmp', 'data', 'translations', locale, fileName),
-        path.join('/opt', 'data', 'translations', locale, fileName),
-
-        // Alternative paths for different build configurations
-        path.join(process.cwd(), 'translations', locale, fileName),
-        path.join(process.cwd(), '.next', 'static', 'data', 'translations', locale, fileName),
-
-        // AWS Lambda specific paths
-        path.join('/var', 'task', 'data', 'translations', locale, fileName),
-        path.join('/var', 'task', '.next', 'standalone', 'data', 'translations', locale, fileName),
-
-        // Railway, Render, and other platform paths
-        path.join('/app', '.next', 'server', 'data', 'translations', locale, fileName),
-        path.join('/workspace', 'data', 'translations', locale, fileName),
-
-        // Additional Amplify paths
-        path.join('/var', 'runtime', 'data', 'translations', locale, fileName),
+        // Additional Amplify runtime paths
+        path.join('/opt', 'amplify', '.next', 'standalone', 'data', 'translations', locale, fileName),
         path.join('/var', 'runtime', '.next', 'standalone', 'data', 'translations', locale, fileName),
+        path.join('/tmp', 'amplify', '.next', 'standalone', 'data', 'translations', locale, fileName),
+
+        // Docker/containerized runtime paths
+        path.join('/app', '.next', 'standalone', 'data', 'translations', locale, fileName),
+        path.join('/app', '.next', 'server', 'data', 'translations', locale, fileName),
+
+        // Lambda runtime paths
+        path.join('/var', 'task', '.next', 'standalone', 'data', 'translations', locale, fileName),
+        path.join('/var', 'task', '.next', 'server', 'data', 'translations', locale, fileName),
+
+        // Development fallback (only for local testing)
+        path.join(process.cwd(), 'data', 'translations', locale, fileName),
     ];
 }
 
@@ -62,21 +38,19 @@ async function loadTranslationFile(locale: string, namespace: string): Promise<{
 } | null> {
     const possiblePaths = getTranslationFilePaths(locale, namespace);
 
-    console.log(`🔍 Attempting to load ${locale}/${namespace} from ${possiblePaths.length} possible paths`);
+    console.log(`🔍 [RUNTIME] Loading ${locale}/${namespace} from ${possiblePaths.length} build paths`);
+    console.log(`📁 Working directory: ${process.cwd()}`);
 
     for (const filePath of possiblePaths) {
         try {
-            // Check if file exists first
             if (fs.existsSync(filePath)) {
                 console.log(`✅ Found translation file at: ${filePath}`);
 
-                // Read and parse the file
                 const fileContent = fs.readFileSync(filePath, 'utf-8');
                 const data = JSON.parse(fileContent);
 
-                // Validate that it's a valid translation object
                 if (typeof data === 'object' && data !== null) {
-                    console.log(`✅ Successfully loaded and parsed translation file: ${filePath}`);
+                    console.log(`✅ Successfully loaded translation file: ${filePath}`);
                     return { data, filePath };
                 } else {
                     console.warn(`⚠️  Invalid translation format in: ${filePath}`);
@@ -88,29 +62,29 @@ async function loadTranslationFile(locale: string, namespace: string): Promise<{
         }
     }
 
-    // Log all attempted paths for debugging
     console.error(`❌ Translation file not found for ${locale}/${namespace}`);
-    console.error(`📁 Current working directory: ${process.cwd()}`);
-    console.error(`🔍 Attempted paths:`, possiblePaths);
+    console.error(`🔍 Tried paths:`, possiblePaths);
 
-    // Also log directory contents for debugging
+    // Debug built directory structure
     try {
-        const dataDir = path.join(process.cwd(), 'data');
-        if (fs.existsSync(dataDir)) {
-            console.log(`📂 Contents of data directory:`, fs.readdirSync(dataDir));
+        const nextDir = path.join(process.cwd(), '.next');
+        if (fs.existsSync(nextDir)) {
+            console.log(`📂 .next directory exists`);
 
-            const translationsDir = path.join(dataDir, 'translations');
-            if (fs.existsSync(translationsDir)) {
-                console.log(`📂 Contents of translations directory:`, fs.readdirSync(translationsDir));
+            const standaloneDir = path.join(nextDir, 'standalone');
+            if (fs.existsSync(standaloneDir)) {
+                console.log(`📂 .next/standalone exists`);
+                console.log(`📁 Contents:`, fs.readdirSync(standaloneDir));
 
-                const localeDir = path.join(translationsDir, locale);
-                if (fs.existsSync(localeDir)) {
-                    console.log(`📂 Contents of ${locale} directory:`, fs.readdirSync(localeDir));
+                const dataDir = path.join(standaloneDir, 'data');
+                if (fs.existsSync(dataDir)) {
+                    console.log(`📂 .next/standalone/data exists`);
+                    console.log(`📁 Contents:`, fs.readdirSync(dataDir));
                 }
             }
         }
     } catch (debugError) {
-        console.error('Debug directory listing failed:', debugError);
+        console.error('Debug failed:', debugError);
     }
 
     return null;
@@ -125,7 +99,6 @@ export async function GET(
     try {
         const { locale, namespace } = await params;
 
-        // Validate required parameters
         if (!locale || !namespace) {
             console.error('❌ Missing required parameters:', { locale, namespace });
             return NextResponse.json(
@@ -134,7 +107,6 @@ export async function GET(
             );
         }
 
-        // Validate locale support
         if (!translationConfig.supportedLocales.includes(locale as Locale)) {
             console.error('❌ Unsupported locale:', locale);
             return NextResponse.json(
@@ -143,9 +115,8 @@ export async function GET(
             );
         }
 
-        console.log(`🔍 [${new Date().toISOString()}] Loading translations for ${locale}/${namespace}`);
+        console.log(`🔍 [${new Date().toISOString()}] RUNTIME: Loading translations for ${locale}/${namespace}`);
 
-        // Try to load the translation file
         const result = await loadTranslationFile(locale, namespace);
 
         if (!result) {
@@ -154,16 +125,16 @@ export async function GET(
                     error: `Translation file not found for ${locale}/${namespace}`,
                     supportedLocales: translationConfig.supportedLocales,
                     environment: process.env.NODE_ENV || 'unknown',
-                    platform: process.env.VERCEL ? 'vercel' : process.env.AWS_REGION ? 'aws' : 'unknown'
+                    platform: process.env.AWS_REGION ? 'aws' : 'unknown',
+                    workingDir: process.cwd()
                 },
                 { status: 404 }
             );
         }
 
         const duration = Date.now() - startTime;
-        console.log(`✅ Successfully loaded translations from: ${result.filePath} (${duration}ms)`);
+        console.log(`✅ RUNTIME: Successfully loaded translations from: ${result.filePath} (${duration}ms)`);
 
-        // Return successful response
         const response = NextResponse.json({
             locale,
             namespace,
@@ -174,7 +145,6 @@ export async function GET(
             loadTime: duration
         });
 
-        // Set appropriate cache headers for Amplify
         response.headers.set('Cache-Control', 'public, max-age=1800, stale-while-revalidate=3600');
         response.headers.set('Access-Control-Allow-Origin', '*');
         response.headers.set('Access-Control-Allow-Methods', 'GET');
@@ -183,7 +153,7 @@ export async function GET(
         return response;
     } catch (error) {
         const duration = Date.now() - startTime;
-        console.error(`❌ Translation API error (${duration}ms):`, error);
+        console.error(`❌ RUNTIME Translation API error (${duration}ms):`, error);
 
         return NextResponse.json(
             {
@@ -191,7 +161,7 @@ export async function GET(
                 details: error instanceof Error ? error.message : 'Unknown error',
                 timestamp: new Date().toISOString(),
                 environment: process.env.NODE_ENV || 'unknown',
-                platform: process.env.VERCEL ? 'vercel' : process.env.AWS_REGION ? 'aws' : 'unknown'
+                platform: process.env.AWS_REGION ? 'aws' : 'unknown'
             },
             { status: 500 }
         );
