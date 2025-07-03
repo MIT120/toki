@@ -16,8 +16,11 @@ import ElectricityDataTable from '../src/components/tables/electricity-data-tabl
 import { useTranslation } from '../src/hooks/use-translation';
 import { getAvailableDates } from '../src/services';
 
+// Force dynamic rendering to ensure translations work properly
+export const dynamic = 'force-dynamic'
+
 export default function ElectricityDashboard() {
-    const { t } = useTranslation('page');
+    const { t, isLoading: isTranslationLoading } = useTranslation('page');
     const { t: tFilters } = useTranslation('filters');
     const { t: tCommon } = useTranslation('common');
 
@@ -51,6 +54,28 @@ export default function ElectricityDashboard() {
 
         loadAvailableDates();
     }, []);
+
+    // Show loading state while translations are loading
+    if (isTranslationLoading) {
+        return (
+            <Navigation>
+                <div className="min-h-screen bg-background">
+                    <div className="container mx-auto p-4 lg:p-6 space-y-6">
+                        <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
+                            <div className="space-y-1">
+                                <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
+                                    Loading...
+                                </h1>
+                                <p className="text-muted-foreground text-sm lg:text-base">
+                                    Please wait while we load your data
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </Navigation>
+        );
+    }
 
     return (
         <Navigation>

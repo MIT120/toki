@@ -22,9 +22,15 @@ export function TranslationProvider({ children, initialLocale }: TranslationProv
     const [locale, setLocaleState] = useState<Locale>(
         initialLocale || translationConfig.defaultLocale
     )
-    const [isLoading, setIsLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(true) // Start with loading = true
     const [error, setError] = useState<Error | null>(null)
     const [cache, setCache] = useState<TranslationCache>({})
+    const [hasHydrated, setHasHydrated] = useState(false)
+
+    // Handle hydration
+    useEffect(() => {
+        setHasHydrated(true)
+    }, [])
 
     const setLocale = useCallback((newLocale: Locale) => {
         setLocaleState(newLocale)
@@ -51,6 +57,11 @@ export function TranslationProvider({ children, initialLocale }: TranslationProv
     }
 
     const loadTranslations = useCallback(async (targetLocale: Locale, namespace: string = 'common') => {
+        // Don't load during SSR
+        if (typeof window === 'undefined') {
+            return {}
+        }
+
         const cacheKey = `${targetLocale}.${namespace}`
 
         if (cache[cacheKey] && isCacheValid(cache[cacheKey])) {
@@ -88,6 +99,11 @@ export function TranslationProvider({ children, initialLocale }: TranslationProv
     }, [cache])
 
     const t = useCallback((key: string, interpolations?: Record<string, any>): string => {
+        // During SSR or before hydration, return the key
+        if (typeof window === 'undefined' || !hasHydrated) {
+            return key
+        }
+
         // Try to find the translation in cache for common namespace first
         const commonCacheKey = `${locale}.common`
         const commonData = cache[commonCacheKey]
@@ -117,20 +133,23 @@ export function TranslationProvider({ children, initialLocale }: TranslationProv
         }
 
         // If still not found, attempt to load common translations
-        if (!commonData) {
+        if (!commonData && hasHydrated) {
             loadTranslations(locale, 'common').catch(console.error)
         }
 
         return key
-    }, [cache, locale, loadTranslations])
+    }, [cache, locale, loadTranslations, hasHydrated])
 
     const refresh = useCallback(async (): Promise<void> => {
+        if (typeof window === 'undefined') {
+            return
+        }
+
         setIsLoading(true)
         setError(null)
         try {
             setCache({}) // Clear cache
             await loadTranslations(locale, 'common') // Reload common translations
-            window.location.reload()
         } catch (err) {
             setError(err as Error)
         } finally {
@@ -148,16 +167,18 @@ export function TranslationProvider({ children, initialLocale }: TranslationProv
         }
     }, [])
 
-    // Load common translations when locale changes
+    // Load common translations when locale changes and after hydration
     useEffect(() => {
-        loadTranslations(locale, 'common').catch(console.error)
-    }, [locale, loadTranslations])
+        if (hasHydrated) {
+            loadTranslations(locale, 'common').catch(console.error)
+        }
+    }, [locale, loadTranslations, hasHydrated])
 
     const contextValue: TranslationContextValue = {
         locale,
         setLocale,
         t,
-        isLoading,
+        isLoading: !hasHydrated || isLoading,
         error,
         refresh
     }

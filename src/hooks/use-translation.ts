@@ -15,10 +15,15 @@ interface TranslationCache {
 export function useTranslation(namespace: string = 'common'): TranslationHookReturn {
     const { locale, setLocale } = useLocale()
     const [cache, setCache] = useState<TranslationCache>({})
-    const [isLoading, setIsLoading] = useState(false)
+    const [isLoading, setIsLoading] = useState(true)
     const [error, setError] = useState<Error | null>(null)
+    const [hasHydrated, setHasHydrated] = useState(false)
 
     const cacheKey = `${locale}.${namespace}`
+
+    useEffect(() => {
+        setHasHydrated(true)
+    }, [])
 
     const fetchTranslations = useCallback(async () => {
         // Don't fetch during SSR
@@ -74,8 +79,8 @@ export function useTranslation(namespace: string = 'common'): TranslationHookRet
     }
 
     const t = useCallback((key: string, interpolations?: Record<string, any>): string => {
-        // During SSR, return the key as placeholder
-        if (typeof window === 'undefined') {
+        // During SSR or before hydration, return a placeholder or the key
+        if (typeof window === 'undefined' || !hasHydrated) {
             return key
         }
 
@@ -93,7 +98,7 @@ export function useTranslation(namespace: string = 'common'): TranslationHookRet
         }
 
         return interpolate(value, interpolations)
-    }, [cache, cacheKey, locale, namespace])
+    }, [cache, cacheKey, locale, namespace, hasHydrated])
 
     const refresh = useCallback(async () => {
         if (typeof window === 'undefined') {
@@ -109,17 +114,17 @@ export function useTranslation(namespace: string = 'common'): TranslationHookRet
     }, [cacheKey, fetchTranslations])
 
     useEffect(() => {
-        // Only fetch on client side
-        if (typeof window !== 'undefined') {
+        // Only fetch on client side after hydration
+        if (typeof window !== 'undefined' && hasHydrated) {
             fetchTranslations()
         }
-    }, [fetchTranslations])
+    }, [fetchTranslations, hasHydrated])
 
     return {
         t,
         locale,
         setLocale,
-        isLoading,
+        isLoading: !hasHydrated || isLoading,
         error,
         refresh
     }
