@@ -1,0 +1,52 @@
+{
+    "insights": {
+        "title": "Анализи и прозрения",
+        "realTime": "Анализи в реално време",
+        "historical": "Исторически анализ",
+        "predictions": "Прогнози",
+        "trends": "Тенденции",
+        "efficiency": "Анализ на ефективността",
+        "costOptimization": "Оптимизация на разходите",
+        "usagePatterns": "Модели на потребление",
+        "recommendations": "Препоръки"
+    },
+    "calculations": {
+        "totalCost": "Изчисление на общите разходи",
+        "averageCost": "Средни разходи",
+        "peakHours": "Анализ на пиковите часове",
+        "offPeakHours": "Анализ на извън-пиковите часове",
+        "dailyAverage": "Дневна средна стойност",
+        "weeklyTrend": "Седмична тенденция",
+        "monthlyComparison": "Месечно сравнение",
+        "yearOverYear": "Сравнение година към година"
+    },
+    "reports": {
+        "generate": "Генерирай отчет",
+        "export": "Експорт на анализа",
+        "schedule": "Планирай отчет",
+        "summary": "Обобщен отчет",
+        "detailed": "Детайлен анализ",
+        "comparison": "Сравнителен отчет",
+        "trend": "Отчет за анализ на тенденциите",
+        "custom": "Персонализиран отчет"
+    },
+    "metrics": {
+        "currentUsage": "Текущо потребление",
+        "currentCost": "Текущи разходи",
+        "currentPrice": "Текуща цена",
+        "hourProgress": "Прогрес на часа",
+        "todayTotal": "Общо за днес",
+        "efficiency": "Оценка за ефективност",
+        "potentialSavings": "Потенциални спестявания",
+        "usageChange": "Промяна в потреблението",
+        "costChange": "Промяна в разходите"
+    },
+    "periods": {
+        "hourly": "Почасово",
+        "daily": "Дневно",
+        "weekly": "Седмично",
+        "monthly": "Месечно",
+        "quarterly": "Тримесечно",
+        "yearly": "Годишно"
+    }
+}

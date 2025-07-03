@@ -1,0 +1,41 @@
+{
+    "general": {
+        "somethingWentWrong": "Нещо се обърка",
+        "unexpectedError": "Възникна неочаквана грешка",
+        "tryAgain": "Моля, опитайте отново",
+        "contactSupport": "Свържете се с поддръжката, ако проблемът продължава",
+        "errorOccurred": "Възникна грешка",
+        "unknownError": "Неизвестна грешка"
+    },
+    "api": {
+        "networkError": "Възникна мрежова грешка",
+        "serverError": "Възникна сървърна грешка",
+        "timeoutError": "Заявката изтече",
+        "connectionError": "Грешка при свързване",
+        "authenticationError": "Грешка при удостоверяване",
+        "authorizationError": "Грешка при упълномощаване",
+        "notFoundError": "Ресурсът не е намерен",
+        "validationError": "Грешка при валидация",
+        "rateLimitError": "Превишен лимит на заявки"
+    },
+    "validation": {
+        "required": "Това поле е задължително",
+        "invalidEmail": "Невалиден имейл адрес",
+        "invalidFormat": "Невалиден формат",
+        "tooShort": "Твърде кратко",
+        "tooLong": "Твърде дълго",
+        "invalidNumber": "Невалидно число",
+        "invalidDate": "Невалидна дата",
+        "invalidRange": "Невалиден диапазон",
+        "mustBePositive": "Трябва да е положително число",
+        "mustBeGreaterThan": "Трябва да е по-голямо от {{value}}",
+        "mustBeLessThan": "Трябва да е по-малко от {{value}}"
+    },
+    "loading": {
+        "failedToLoad": "Неуспешно зареждане на данни",
+        "failedToSave": "Неуспешно запазване на данни",
+        "failedToDelete": "Неуспешно изтриване на данни",
+        "failedToUpdate": "Неуспешно обновяване на данни",
+        "failedToFetch": "Неуспешно извличане на данни"
+    }
+}

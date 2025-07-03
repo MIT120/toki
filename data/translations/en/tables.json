@@ -1,0 +1,69 @@
+{
+    "headers": {
+        "timestamp": "Timestamp",
+        "usage": "Usage",
+        "cost": "Cost",
+        "price": "Price",
+        "hour": "Hour",
+        "date": "Date",
+        "value": "Value",
+        "status": "Status",
+        "action": "Action",
+        "name": "Name",
+        "location": "Location",
+        "meteringPoint": "Metering Point"
+    },
+    "actions": {
+        "view": "View",
+        "edit": "Edit",
+        "delete": "Delete",
+        "export": "Export",
+        "refresh": "Refresh",
+        "filter": "Filter",
+        "sort": "Sort",
+        "selectAll": "Select All",
+        "deselectAll": "Deselect All"
+    },
+    "empty": {
+        "noData": "No data available",
+        "noResults": "No results found",
+        "tryDifferentFilters": "Try adjusting your filters",
+        "loadingData": "Loading data...",
+        "errorLoadingData": "Error loading data"
+    },
+    "pagination": {
+        "previous": "Previous",
+        "next": "Next",
+        "page": "Page",
+        "of": "of",
+        "items": "items",
+        "showing": "Showing",
+        "to": "to",
+        "results": "results"
+    },
+    "electricity": {
+        "title": "Hourly Electricity Data",
+        "dataFor": "Data for {{date}} • {{count}} of {{total}} hours",
+        "searchPlaceholder": "Search hours, usage, price, or cost...",
+        "totalUsage": "Total Usage",
+        "totalCost": "Total Cost",
+        "avgPrice": "Avg Price (BGN/kWh)",
+        "hour": "Hour",
+        "usage": "Usage (kWh)",
+        "price": "Price (BGN/kWh)",
+        "cost": "Cost (BGN)",
+        "status": "Status",
+        "exportCSV": "Export CSV",
+        "noResults": "No results found for \"{{searchTerm}}\"",
+        "usageStatus": {
+            "high": "High Usage",
+            "med": "Med Usage",
+            "low": "Low Usage"
+        },
+        "priceStatus": {
+            "high": "High Price",
+            "med": "Med Price",
+            "low": "Low Price"
+        }
+    }
+}

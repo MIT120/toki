@@ -1,0 +1,48 @@
+{
+    "menu": {
+        "dashboard": "Табло",
+        "analytics": "Анализи",
+        "reports": "Отчети",
+        "settings": "Настройки",
+        "help": "Помощ",
+        "profile": "Профил",
+        "logout": "Изход",
+        "meteringPoints": "Точки на измерване",
+        "customers": "Клиенти",
+        "billing": "Фактуриране",
+        "insights": "Прозрения",
+        "consumption": "Потребление",
+        "costs": "Разходи",
+        "efficiency": "Ефективност",
+        "electricityManagement": "Управление на електричество",
+        "notifications": "Известия"
+    },
+    "breadcrumbs": {
+        "home": "Начало",
+        "dashboard": "Табло",
+        "analytics": "Анализи",
+        "reports": "Отчети",
+        "settings": "Настройки",
+        "meteringPoint": "Точка на измерване",
+        "customer": "Клиент",
+        "profile": "Профил",
+        "help": "Помощ"
+    },
+    "actions": {
+        "goBack": "Назад",
+        "goHome": "Начало",
+        "reload": "Презареди",
+        "close": "Затвори",
+        "minimize": "Минимизирай",
+        "maximize": "Максимизирай",
+        "fullscreen": "Цял екран",
+        "exitFullscreen": "Излез от цял екран",
+        "toggleMenu": "Превключи менюто"
+    },
+    "footer": {
+        "builtWith": "Изградено с Next.js и TypeScript",
+        "cloudStorage": "Google Cloud Storage",
+        "realTimeAnalytics": "Анализи в реално време",
+        "lastUpdated": "Последно обновяване"
+    }
+}

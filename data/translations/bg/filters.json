@@ -1,0 +1,116 @@
+{
+    "dates": {
+        "selectDate": "Избери дата",
+        "selectDateRange": "Избери диапазон от дати",
+        "from": "От",
+        "to": "До",
+        "apply": "Приложи",
+        "clear": "Изчисти",
+        "today": "Днес",
+        "yesterday": "Вчера",
+        "last7Days": "Последните 7 дни",
+        "last30Days": "Последните 30 дни",
+        "thisWeek": "Тази седмица",
+        "lastWeek": "Миналата седмица",
+        "thisMonth": "Този месец",
+        "lastMonth": "Миналия месец",
+        "thisYear": "Тази година",
+        "lastYear": "Миналата година",
+        "custom": "Персонализиран диапазон"
+    },
+    "options": {
+        "all": "Всички",
+        "none": "Никой",
+        "selectAll": "Избери всички",
+        "deselectAll": "Отмени избора",
+        "showMore": "Покажи повече",
+        "showLess": "Покажи по-малко",
+        "search": "Търси опции...",
+        "noOptions": "Няма налични опции"
+    },
+    "placeholders": {
+        "searchPlaceholder": "Търси...",
+        "filterPlaceholder": "Филтрирай по...",
+        "selectOption": "Избери опция",
+        "typeToSearch": "Въведи за търсене",
+        "enterValue": "Въведи стойност",
+        "selectDate": "Избери дата"
+    },
+    "actions": {
+        "reset": "Нулирай филтрите",
+        "apply": "Приложи филтрите",
+        "save": "Запази филтър",
+        "load": "Зареди филтър",
+        "export": "Експорт на филтрираните данни"
+    },
+    "dateRanges": {
+        "today": "Днес",
+        "yesterday": "Вчера",
+        "lastWeek": "Миналата седмица",
+        "lastMonth": "Миналия месец",
+        "thisWeek": "Тази седмица",
+        "thisMonth": "Този месец",
+        "all": "Всички",
+        "custom": "Персонализиран",
+        "last7Days": "Последните 7 дни",
+        "last30Days": "Последните 30 дни"
+    },
+    "timeRanges": {
+        "morning": "Сутрин",
+        "afternoon": "Следобед",
+        "evening": "Вечер",
+        "night": "Нощ",
+        "peakHours": "Пикови часове",
+        "offPeakHours": "Извън-пикови часове"
+    },
+    "sortOptions": {
+        "date": "Дата",
+        "usage": "Потребление",
+        "cost": "Разходи",
+        "efficiency": "Ефективност",
+        "ascending": "Възходящо",
+        "descending": "Низходящо"
+    },
+    "filterActions": {
+        "apply": "Приложи филтър",
+        "clear": "Изчисти филтър",
+        "reset": "Нулирай",
+        "save": "Запази филтър",
+        "load": "Зареди филтър",
+        "export": "Експорт на филтрираните данни"
+    },
+    "dateSelector": {
+        "title": "Избор на дата",
+        "previous": "Назад",
+        "next": "Напред",
+        "selectedDate": "Избрана дата",
+        "selectSpecificDate": "Изберете конкретна дата",
+        "quickSelect": "Бърз избор",
+        "availableDates": "Налични дати",
+        "available": "налични",
+        "notAvailable": "Няма",
+        "loading": "Зареждане...",
+        "dataStatus": "Статус на данните",
+        "statusAvailable": "Налични",
+        "statusNoData": "Няма данни"
+    },
+    "meteringPoint": {
+        "title": "Точка за измерване",
+        "selectMeter": "Избери брояч",
+        "placeholder": "Избери точка за измерване",
+        "meteringPointId": "ID: {{id}}",
+        "location": "{{location}} • ID: {{id}}"
+    },
+    "quickDates": {
+        "april15": "15 април 2022 г.",
+        "april20": "20 април 2022 г.",
+        "april25": "25 април 2022 г."
+    },
+    "tabs": {
+        "overview": "Преглед",
+        "charts": "Графики",
+        "analysis": "Анализ",
+        "insights": "Прозрения",
+        "data": "Данни"
+    }
+}

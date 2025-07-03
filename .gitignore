@@ -109,6 +109,7 @@ data/*.csv
 data/*.json
 !data/schema.json
 !data/config.json
+!data/translations/**/*.json
 
 # Firebase
 *.json
@@ -118,6 +119,7 @@ data/*.json
 !firestore.*.json
 !.eslintrc.json
 !components.json
+!data/translations/**/*.json
 
 # Vercel
 .vercel

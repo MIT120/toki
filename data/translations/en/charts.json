@@ -1,0 +1,94 @@
+{
+    "titles": {
+        "hourlyUsage": "Hourly Usage",
+        "dailyUsage": "Daily Usage",
+        "weeklyUsage": "Weekly Usage",
+        "monthlyUsage": "Monthly Usage",
+        "costAnalysis": "Cost Analysis",
+        "priceComparison": "Price Comparison",
+        "usageTrends": "Usage Trends",
+        "efficiency": "Efficiency Over Time",
+        "hourlyData": "Hourly Electricity Data",
+        "usageChart": "Usage Chart",
+        "costChart": "Cost Chart",
+        "priceChart": "Price Chart",
+        "combinedChart": "Combined Usage & Cost"
+    },
+    "labels": {
+        "usage": "Usage",
+        "cost": "Cost",
+        "price": "Price",
+        "time": "Time",
+        "hour": "Hour",
+        "day": "Day",
+        "week": "Week",
+        "month": "Month",
+        "date": "Date",
+        "value": "Value",
+        "average": "Average",
+        "peak": "Peak",
+        "offPeak": "Off-Peak"
+    },
+    "tooltips": {
+        "usage": "Usage: {{value}} {{unit}}",
+        "cost": "Cost: {{value}} {{currency}}",
+        "price": "Price: {{value}} {{currency}}/{{unit}}",
+        "efficiency": "Efficiency: {{value}}%",
+        "time": "Time: {{time}}",
+        "date": "Date: {{date}}",
+        "total": "Total: {{value}}",
+        "average": "Average: {{value}}",
+        "hour": "Hour: {{hour}}",
+        "usage": "Usage",
+        "price": "Price",
+        "cost": "Cost"
+    },
+    "legends": {
+        "currentPeriod": "Current Period",
+        "previousPeriod": "Previous Period",
+        "forecast": "Forecast",
+        "actual": "Actual",
+        "target": "Target",
+        "benchmark": "Benchmark"
+    },
+    "noData": {
+        "title": "No Data Available",
+        "message": "No data available for the selected period",
+        "action": "Try selecting a different date range"
+    },
+    "subtitles": {
+        "hourlyBreakdown": "Hourly breakdown for {{date}}",
+        "dailyBreakdown": "Daily breakdown for {{period}}",
+        "weeklyBreakdown": "Weekly breakdown for {{period}}",
+        "monthlyBreakdown": "Monthly breakdown for {{period}}"
+    },
+    "descriptions": {
+        "hourlyData": "Hourly electricity usage, pricing, and costs for {{date}}",
+        "usagePattern": "Electricity usage patterns and trends",
+        "costAnalysis": "Cost analysis and spending patterns",
+        "priceVariations": "Electricity price variations throughout the day"
+    },
+    "metrics": {
+        "totalUsage": "Total Usage",
+        "totalCost": "Total Cost",
+        "avgPrice": "Avg Price",
+        "peakUsage": "Peak Usage",
+        "peakHour": "Peak Hour",
+        "highCost": "High Cost",
+        "normal": "Normal"
+    },
+    "legend": {
+        "usage": "Usage (kWh)",
+        "cost": "Cost (BGN)",
+        "price": "Price (BGN/kWh)"
+    },
+    "loading": {
+        "title": "Loading chart data...",
+        "description": "Please wait while we load your electricity data"
+    },
+    "errors": {
+        "loadingData": "Error Loading Hourly Data",
+        "noDataAvailable": "No Data Available",
+        "noDataMessage": "No data available for {{date}}"
+    }
+}

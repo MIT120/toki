@@ -1,0 +1,22 @@
+{
+    "title": "Electricity Management",
+    "subtitle": "Monitor and optimize your bakery's energy consumption",
+    "status": {
+        "gcsDataActive": "🔋 GCS + Local Data Active",
+        "realDataAvailable": "Real Data Available"
+    },
+    "company": {
+        "name": "Strahil's Bakery"
+    },
+    "tabs": {
+        "overview": "Overview",
+        "charts": "Charts",
+        "analysis": "Analysis",
+        "insights": "Insights",
+        "data": "Data"
+    },
+    "loading": {
+        "title": "Loading...",
+        "subtitle": "Please wait while we load your data"
+    }
+}

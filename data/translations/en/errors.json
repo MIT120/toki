@@ -1,0 +1,41 @@
+{
+    "general": {
+        "somethingWentWrong": "Something went wrong",
+        "unexpectedError": "An unexpected error occurred",
+        "tryAgain": "Please try again",
+        "contactSupport": "Contact support if the problem persists",
+        "errorOccurred": "An error occurred",
+        "unknownError": "Unknown error"
+    },
+    "api": {
+        "networkError": "Network error occurred",
+        "serverError": "Server error occurred",
+        "timeoutError": "Request timeout",
+        "connectionError": "Connection error",
+        "authenticationError": "Authentication error",
+        "authorizationError": "Authorization error",
+        "notFoundError": "Resource not found",
+        "validationError": "Validation error",
+        "rateLimitError": "Rate limit exceeded"
+    },
+    "validation": {
+        "required": "This field is required",
+        "invalidEmail": "Invalid email address",
+        "invalidFormat": "Invalid format",
+        "tooShort": "Too short",
+        "tooLong": "Too long",
+        "invalidNumber": "Invalid number",
+        "invalidDate": "Invalid date",
+        "invalidRange": "Invalid range",
+        "mustBePositive": "Must be positive",
+        "mustBeGreaterThan": "Must be greater than {{value}}",
+        "mustBeLessThan": "Must be less than {{value}}"
+    },
+    "loading": {
+        "failedToLoad": "Failed to load data",
+        "failedToSave": "Failed to save data",
+        "failedToDelete": "Failed to delete data",
+        "failedToUpdate": "Failed to update data",
+        "failedToFetch": "Failed to fetch data"
+    }
+}

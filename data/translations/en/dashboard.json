@@ -1,0 +1,54 @@
+{
+    "overview": {
+        "title": "Electricity Dashboard",
+        "description": "Monitor your electricity consumption and costs",
+        "subtitle": "Real-time insights into your energy usage",
+        "welcomeMessage": "Welcome back, {{owner}}! Here's your bakery's energy overview.",
+        "meteringPointsDescription": "Status of your bakery locations",
+        "insightsDescription": "Smart recommendations for cost optimization",
+        "efficiencyDescription": "Your bakery's performance today",
+        "efficiencyBasisDescription": "Based on optimal usage patterns and cost efficiency",
+        "throughOptimization": "Through optimization",
+        "noDataMessage": "Dashboard data is not available at the moment.",
+        "noInsightsMessage": "No insights available for today. Check back later!"
+    },
+    "metrics": {
+        "title": "Key Metrics",
+        "totalUsage": "Total Usage",
+        "totalCost": "Total Cost",
+        "averagePrice": "Average Price",
+        "meteringPoints": "Metering Points",
+        "todayUsage": "Today's Usage",
+        "todayCost": "Today's Cost",
+        "monthlyUsage": "Monthly Usage",
+        "monthlyCost": "Monthly Cost",
+        "efficiency": "Efficiency Score",
+        "savings": "Potential Savings",
+        "peak": "Peak Usage Hour",
+        "offPeak": "Off-Peak Usage"
+    },
+    "actions": {
+        "refreshData": "Refresh Data",
+        "exportReport": "Export Report",
+        "viewDetails": "View Details",
+        "analyze": "Analyze",
+        "configure": "Configure",
+        "viewInsights": "View Insights"
+    },
+    "periods": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "thisWeek": "This Week",
+        "lastWeek": "Last Week",
+        "thisMonth": "This Month",
+        "lastMonth": "Last Month",
+        "last7Days": "Last 7 Days",
+        "last30Days": "Last 30 Days"
+    },
+    "cards": {
+        "meteringPointsTitle": "Metering Points",
+        "recentActivity": "Recent Insights",
+        "quickStats": "Quick Statistics",
+        "alerts": "Alerts & Notifications"
+    }
+}

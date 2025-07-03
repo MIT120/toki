@@ -1,0 +1,45 @@
+{
+    "title": "Cost Analysis",
+    "subtitle": "Detailed cost breakdown for {{date}}",
+    "metrics": {
+        "totalUsage": "Total Usage",
+        "totalCost": "Total Cost",
+        "avgPrice": "Avg Price",
+        "peakHour": "Peak Hour",
+        "peakUsage": "Peak Usage",
+        "efficiency": "Efficiency Score",
+        "potentialSavings": "Potential Savings"
+    },
+    "descriptions": {
+        "usagePeak": "Usage peak",
+        "monthlyOptimization": "Estimated monthly savings through optimization",
+        "efficiencyScore": "Your bakery's energy efficiency for {{date}}",
+        "costBreakdown": "Detailed analysis of your energy costs and usage patterns",
+        "smartRecommendations": "AI-powered suggestions to reduce your energy costs"
+    },
+    "efficiency": {
+        "excellent": "Excellent performance!",
+        "good": "Good performance with room for improvement.",
+        "needsImprovement": "Consider optimizing your energy usage patterns.",
+        "score": "Efficiency Score"
+    },
+    "savings": {
+        "potential": "Potential Savings",
+        "monthly": "Estimated monthly savings through optimization",
+        "save": "Save {{amount}} {{currency}}"
+    },
+    "breakdown": {
+        "title": "Cost Breakdown Analysis",
+        "description": "Detailed analysis of your energy costs and usage patterns",
+        "costPerKwh": "Cost per kWh",
+        "totalHours": "Total Hours",
+        "averageUsage": "Average Usage"
+    },
+    "recommendations": {
+        "title": "Smart Recommendations",
+        "description": "AI-powered suggestions to optimize your energy usage",
+        "emptyMessage": "Your energy usage is optimized! No specific recommendations at this time.",
+        "priority": "PRIORITY",
+        "info": "INFO"
+    }
+}

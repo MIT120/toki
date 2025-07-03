@@ -1,0 +1,87 @@
+{
+    "dates": {
+        "selectDate": "Select date",
+        "selectDateRange": "Select date range",
+        "from": "From",
+        "to": "To",
+        "apply": "Apply",
+        "clear": "Clear",
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "last7Days": "Last 7 Days",
+        "last30Days": "Last 30 Days",
+        "thisWeek": "This Week",
+        "lastWeek": "Last Week",
+        "thisMonth": "This Month",
+        "lastMonth": "Last Month",
+        "thisYear": "This Year",
+        "lastYear": "Last Year",
+        "custom": "Custom Range"
+    },
+    "options": {
+        "all": "All",
+        "none": "None",
+        "selectAll": "Select All",
+        "deselectAll": "Deselect All",
+        "showMore": "Show More",
+        "showLess": "Show Less",
+        "search": "Search options...",
+        "noOptions": "No options available"
+    },
+    "placeholders": {
+        "searchPlaceholder": "Search...",
+        "filterPlaceholder": "Filter by...",
+        "selectOption": "Select an option",
+        "typeToSearch": "Type to search",
+        "enterValue": "Enter value",
+        "selectDate": "Select date"
+    },
+    "actions": {
+        "reset": "Reset Filters",
+        "apply": "Apply Filters",
+        "save": "Save Filter",
+        "load": "Load Filter",
+        "export": "Export Filtered Data"
+    },
+    "dateSelector": {
+        "title": "Date Selection",
+        "previous": "Previous",
+        "next": "Next",
+        "selectedDate": "Selected Date",
+        "selectSpecificDate": "Select Specific Date",
+        "quickSelect": "Quick Select",
+        "availableDates": "Available Dates",
+        "available": "available",
+        "notAvailable": "N/A",
+        "loading": "Loading...",
+        "dataStatus": "Data Status",
+        "statusAvailable": "Available",
+        "statusNoData": "No Data"
+    },
+    "meteringPoint": {
+        "title": "Metering Point",
+        "selectMeter": "Select meter",
+        "placeholder": "Select a metering point",
+        "meteringPointId": "ID: {{id}}",
+        "location": "{{location}} • ID: {{id}}"
+    },
+    "quickDates": {
+        "april15": "April 15, 2022",
+        "april20": "April 20, 2022",
+        "april25": "April 25, 2022"
+    },
+    "tabs": {
+        "overview": "Overview",
+        "charts": "Charts",
+        "analysis": "Analysis",
+        "insights": "Insights",
+        "data": "Data"
+    },
+    "dateRanges": {
+        "today": "Today",
+        "yesterday": "Yesterday",
+        "lastWeek": "Last Week",
+        "lastMonth": "Last Month",
+        "custom": "Custom"
+    }
+}

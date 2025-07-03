@@ -1,0 +1,48 @@
+{
+    "menu": {
+        "dashboard": "Dashboard",
+        "analytics": "Analytics",
+        "reports": "Reports",
+        "settings": "Settings",
+        "help": "Help",
+        "profile": "Profile",
+        "logout": "Logout",
+        "meteringPoints": "Metering Points",
+        "customers": "Customers",
+        "billing": "Billing",
+        "insights": "Insights",
+        "consumption": "Consumption",
+        "costs": "Costs",
+        "efficiency": "Efficiency",
+        "electricityManagement": "Electricity Management",
+        "notifications": "Notifications"
+    },
+    "breadcrumbs": {
+        "home": "Home",
+        "dashboard": "Dashboard",
+        "analytics": "Analytics",
+        "reports": "Reports",
+        "settings": "Settings",
+        "meteringPoint": "Metering Point",
+        "customer": "Customer",
+        "profile": "Profile",
+        "help": "Help"
+    },
+    "actions": {
+        "goBack": "Go Back",
+        "goHome": "Go Home",
+        "reload": "Reload",
+        "close": "Close",
+        "minimize": "Minimize",
+        "maximize": "Maximize",
+        "fullscreen": "Fullscreen",
+        "exitFullscreen": "Exit Fullscreen",
+        "toggleMenu": "Toggle menu"
+    },
+    "footer": {
+        "builtWith": "Built with Next.js & TypeScript",
+        "cloudStorage": "Google Cloud Storage",
+        "realTimeAnalytics": "Real-time Analytics",
+        "lastUpdated": "Last updated"
+    }
+}

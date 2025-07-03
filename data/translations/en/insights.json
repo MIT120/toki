@@ -1,0 +1,44 @@
+{
+    "title": "Real-Time Insights",
+    "subtitle": "Live monitoring and AI-powered recommendations • Last updated: {{timestamp}}",
+    "descriptions": {
+        "liveMonitoring": "Live monitoring and AI-powered recommendations",
+        "realTimeEfficiency": "Your real-time energy efficiency rating",
+        "optimizationSuggestions": "AI-powered suggestions based on your current usage patterns"
+    },
+    "metrics": {
+        "currentUsage": "Current Usage",
+        "currentCost": "Current Cost",
+        "currentPrice": "Current Price",
+        "hourProgress": "Hour Progress",
+        "currentEfficiency": "Current Efficiency"
+    },
+    "summaries": {
+        "todayTitle": "Today's Summary",
+        "totalUsageToday": "Total Usage Today",
+        "totalCostToday": "Total Cost Today",
+        "vsYesterday": "vs yesterday"
+    },
+    "recommendations": {
+        "title": "Smart Recommendations",
+        "description": "AI-powered suggestions based on your current usage patterns",
+        "emptyMessage": "Your current usage is optimized! No immediate recommendations."
+    },
+    "efficiency": {
+        "title": "Efficiency Score",
+        "description": "Your real-time energy efficiency rating",
+        "excellent": "Excellent! Your energy usage is highly optimized.",
+        "good": "Good efficiency with room for improvement.",
+        "needsImprovement": "Consider implementing the recommendations above to improve efficiency."
+    },
+    "status": {
+        "high": "High",
+        "above": "Above",
+        "normal": "Normal"
+    },
+    "errors": {
+        "loadingTitle": "Error Loading Insights",
+        "noDataTitle": "No Insights Available",
+        "noDataMessage": "Real-time insights are not available at the moment."
+    }
+}

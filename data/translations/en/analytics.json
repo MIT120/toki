@@ -1,0 +1,52 @@
+{
+    "insights": {
+        "title": "Analytics & Insights",
+        "realTime": "Real-time Insights",
+        "historical": "Historical Analysis",
+        "predictions": "Predictions",
+        "trends": "Trends",
+        "efficiency": "Efficiency Analysis",
+        "costOptimization": "Cost Optimization",
+        "usagePatterns": "Usage Patterns",
+        "recommendations": "Recommendations"
+    },
+    "calculations": {
+        "totalCost": "Total Cost Calculation",
+        "averageCost": "Average Cost",
+        "peakHours": "Peak Hours Analysis",
+        "offPeakHours": "Off-Peak Hours Analysis",
+        "dailyAverage": "Daily Average",
+        "weeklyTrend": "Weekly Trend",
+        "monthlyComparison": "Monthly Comparison",
+        "yearOverYear": "Year-over-Year Comparison"
+    },
+    "reports": {
+        "generate": "Generate Report",
+        "export": "Export Analysis",
+        "schedule": "Schedule Report",
+        "summary": "Summary Report",
+        "detailed": "Detailed Analysis",
+        "comparison": "Comparison Report",
+        "trend": "Trend Analysis Report",
+        "custom": "Custom Report"
+    },
+    "metrics": {
+        "currentUsage": "Current Usage",
+        "currentCost": "Current Cost",
+        "currentPrice": "Current Price",
+        "hourProgress": "Hour Progress",
+        "todayTotal": "Today's Total",
+        "efficiency": "Efficiency Score",
+        "potentialSavings": "Potential Savings",
+        "usageChange": "Usage Change",
+        "costChange": "Cost Change"
+    },
+    "periods": {
+        "hourly": "Hourly",
+        "daily": "Daily",
+        "weekly": "Weekly",
+        "monthly": "Monthly",
+        "quarterly": "Quarterly",
+        "yearly": "Yearly"
+    }
+}
