@@ -7,6 +7,16 @@ import {
     getUsageForMeteringPointAndDate
 } from '../../data';
 import { MeteringPoint } from '../types';
+import {
+    calculateEfficiencyScore,
+    calculateTotalCost,
+    calculateTotalUsage,
+    createHourlyDataPoints,
+    createPriceByHourMap,
+    getHourFromTimestamp,
+    roundToDecimals
+} from '../utils/electricity-calculations';
+import { generateRealTimeRecommendation } from '../utils/electricity-suggestions';
 
 interface DashboardOverview {
     customer: {
@@ -170,42 +180,9 @@ export async function getHourlyDataAction(
             return { success: false, error: 'No data available for the specified date and metering point' };
         }
 
-        const hourlyMap = new Map<number, HourlyData>();
+        // Use new calculation utilities
+        const hourlyData = createHourlyDataPoints(usage, prices);
 
-        // Initialize all 24 hours with zero values
-        for (let hour = 0; hour < 24; hour++) {
-            hourlyMap.set(hour, {
-                hour,
-                usage: 0,
-                price: 0,
-                cost: 0
-            });
-        }
-
-        // Populate usage data
-        for (const usageRecord of usage) {
-            const hour = new Date(usageRecord.timestamp * 1000).getHours();
-            const existing = hourlyMap.get(hour);
-            if (existing) {
-                existing.usage += usageRecord.kwh;
-            }
-        }
-
-        // Populate price data
-        for (const priceRecord of prices) {
-            const hour = new Date(priceRecord.timestamp * 1000).getHours();
-            const existing = hourlyMap.get(hour);
-            if (existing) {
-                existing.price = priceRecord.price;
-            }
-        }
-
-        // Calculate costs
-        for (const [hour, data] of hourlyMap) {
-            data.cost = data.usage * data.price;
-        }
-
-        const hourlyData = Array.from(hourlyMap.values()).sort((a, b) => a.hour - b.hour);
         console.log(`✅ Generated hourly data for ${meteringPointId} on ${dateString} from GCS`);
 
         return { success: true, data: hourlyData };
@@ -245,41 +222,33 @@ export async function getRealTimeInsightsAction(
         }
 
         const currentUsageRecords = usage.filter(u =>
-            new Date(u.timestamp * 1000).getHours() === currentHour
+            getHourFromTimestamp(u.timestamp) === currentHour
         );
 
         const currentPriceRecord = prices.find(p =>
-            new Date(p.timestamp * 1000).getHours() === currentHour
+            getHourFromTimestamp(p.timestamp) === currentHour
         );
 
-        const currentUsage = currentUsageRecords.reduce((sum, u) => sum + u.kwh, 0);
+        const currentUsage = calculateTotalUsage(currentUsageRecords);
         const currentPrice = currentPriceRecord?.price || 0;
         const currentCost = currentUsage * currentPrice;
 
-        const { recommendation, urgencyLevel } = generateRealTimeRecommendation(
-            currentHour,
+        const result = generateRealTimeRecommendation(
             currentUsage,
             currentPrice,
+            usage,
             prices,
-            usage
+            currentHour
         );
+        const { recommendation, urgencyLevel } = {
+            recommendation: result.recommendation,
+            urgencyLevel: result.urgencyLevel
+        };
 
-        // Calculate today's totals
-        const todayUsage = usage.reduce((sum, u) => sum + u.kwh, 0);
-
-        // Create proper hour-to-price mapping for accurate cost calculation
-        const priceByHour = new Map<number, number>();
-        for (const priceRecord of prices) {
-            const hour = new Date(priceRecord.timestamp * 1000).getHours();
-            priceByHour.set(hour, priceRecord.price);
-        }
-
-        // Calculate cost using proper timestamp matching
-        const todayCost = usage.reduce((sum, u) => {
-            const hour = new Date(u.timestamp * 1000).getHours();
-            const price = priceByHour.get(hour) || 0;
-            return sum + (u.kwh * price);
-        }, 0);
+        // Use new calculation utilities
+        const todayUsage = calculateTotalUsage(usage);
+        const priceMap = createPriceByHourMap(prices);
+        const todayCost = calculateTotalCost(usage, priceMap);
 
         // Calculate hour progress (0-100%) - use fixed value for historical data
         const hourProgress = dateString ? 50 : ((new Date().getMinutes() / 60) * 100);
@@ -287,26 +256,12 @@ export async function getRealTimeInsightsAction(
         // Calculate deterministic trends based on actual data
         const avgUsagePerHour = todayUsage / 24;
         const avgCostPerHour = todayCost / 24;
-        const avgPriceForDay = prices.reduce((sum, p) => sum + p.price, 0) / prices.length;
-
-        // Calculate efficiency score based on actual usage patterns
-        const peakHours = usage.filter(u => {
-            const hour = new Date(u.timestamp * 1000).getHours();
-            return hour >= 8 && hour <= 18; // Business hours
-        });
-        const offPeakHours = usage.filter(u => {
-            const hour = new Date(u.timestamp * 1000).getHours();
-            return hour < 8 || hour > 18; // Off-peak hours
-        });
-
-        const peakUsage = peakHours.reduce((sum, u) => sum + u.kwh, 0);
-        const offPeakUsage = offPeakHours.reduce((sum, u) => sum + u.kwh, 0);
-        const efficiencyScore = offPeakUsage > 0 ? Math.min(100, (peakUsage / offPeakUsage) * 50) : 75;
+        const efficiencyScore = calculateEfficiencyScore(usage);
 
         const deterministicTrends = {
             usageChange: currentUsage - avgUsagePerHour, // Actual vs average
             costChange: currentCost - avgCostPerHour,   // Actual vs average  
-            efficiencyScore: Math.round(efficiencyScore * 100) / 100, // Based on peak vs off-peak usage
+            efficiencyScore: roundToDecimals(efficiencyScore, 2), // Based on peak vs off-peak usage
         };
 
         const insights: RealTimeInsights = {
@@ -341,61 +296,3 @@ export async function getRealTimeInsightsAction(
     }
 }
 
-function generateRealTimeRecommendation(
-    currentHour: number,
-    currentUsage: number,
-    currentPrice: number,
-    prices: any[],
-    usage: any[]
-): { recommendation: string; urgencyLevel: 'low' | 'medium' | 'high' } {
-    const avgPrice = prices.reduce((sum, p) => sum + p.price, 0) / prices.length;
-    const avgUsage = usage.reduce((sum, u) => sum + u.kwh, 0) / usage.length;
-
-    const priceThresholdHigh = avgPrice * 1.2;
-    const priceThresholdLow = avgPrice * 0.8;
-    const usageThresholdHigh = avgUsage * 1.5;
-
-    if (currentPrice > priceThresholdHigh && currentUsage > usageThresholdHigh) {
-        return {
-            recommendation: `HIGH ALERT: Both price (${currentPrice.toFixed(4)} BGN/kWh) and usage (${currentUsage.toFixed(1)} kWh) are very high right now. Consider postponing non-essential baking activities.`,
-            urgencyLevel: 'high'
-        };
-    }
-
-    if (currentPrice > priceThresholdHigh) {
-        return {
-            recommendation: `Price is high right now (${currentPrice.toFixed(4)} BGN/kWh). Consider reducing usage or postponing energy-intensive activities to the next hour.`,
-            urgencyLevel: 'medium'
-        };
-    }
-
-    if (currentUsage > usageThresholdHigh) {
-        return {
-            recommendation: `Usage is high this hour (${currentUsage.toFixed(1)} kWh). Monitor equipment to ensure efficient operation.`,
-            urgencyLevel: 'medium'
-        };
-    }
-
-    if (currentPrice < priceThresholdLow) {
-        return {
-            recommendation: `Great time to operate! Price is low (${currentPrice.toFixed(4)} BGN/kWh). Consider running energy-intensive equipment now.`,
-            urgencyLevel: 'low'
-        };
-    }
-
-    const nextHourPrice = prices.find(p =>
-        new Date(p.timestamp * 1000).getHours() === (currentHour + 1) % 24
-    );
-
-    if (nextHourPrice && nextHourPrice.price < currentPrice * 0.9) {
-        return {
-            recommendation: `Price will drop significantly next hour (${nextHourPrice.price.toFixed(4)} BGN/kWh). Consider waiting for non-urgent activities.`,
-            urgencyLevel: 'low'
-        };
-    }
-
-    return {
-        recommendation: `Normal operations. Current price: ${currentPrice.toFixed(4)} BGN/kWh, usage: ${currentUsage.toFixed(1)} kWh.`,
-        urgencyLevel: 'low'
-    };
-} 

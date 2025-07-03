@@ -221,4 +221,10 @@ export interface AnalyticsConfig {
     trackPageViews?: boolean;
     batchEvents?: boolean;
     flushInterval?: number;
-} 
+}
+
+// Translation System Types
+export * from './translation';
+
+// Re-export all service types
+export * from './services';

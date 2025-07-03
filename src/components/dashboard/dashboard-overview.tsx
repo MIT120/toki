@@ -1,20 +1,32 @@
 "use client";
 
-import { AlertCircle, Clock, DollarSign, TrendingUp, Zap } from 'lucide-react';
+import { Clock, DollarSign, TrendingUp, Zap } from 'lucide-react';
 import { useDashboardAnalytics } from '../../contexts/analytics-context';
 import { useDashboardQuery } from '../../hooks/use-dashboard-query';
+import { useTranslation } from '../../hooks/use-translation';
+import {
+    roundCurrency,
+    roundPrice,
+    roundUsage
+} from '../../utils/electricity-calculations';
+import LoadingSkeleton from '../common/loading-skeleton';
+import MetricsGrid from '../common/metrics-grid';
+import QueryStateWrapper from '../common/query-state-wrapper';
 import RefreshHeader from '../common/refresh-header';
-import { Alert, AlertDescription, AlertTitle } from '../ui/alert';
+import { Alert, AlertDescription } from '../ui/alert';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
 import { Progress } from '../ui/progress';
-
-interface DashboardOverviewProps {
-    date?: string;
-}
+import type {
+    DashboardContentProps,
+    DashboardOverviewProps
+} from './types';
 
 export default function DashboardOverviewComponent({ date }: DashboardOverviewProps) {
+    const { t } = useTranslation('dashboard');
+    const { t: tCommon } = useTranslation('common');
+
     // Use React Query for data fetching (already includes analytics)
     const {
         data: dashboardData,
@@ -28,8 +40,8 @@ export default function DashboardOverviewComponent({ date }: DashboardOverviewPr
         date,
         enabled: true,
         enableAnalytics: true,
-        staleTime: 1000 * 60 * 5, // 5 minutes
-        refetchInterval: false, // Manual refresh only
+        staleTime: 1000 * 60 * 5,
+        refetchInterval: false,
     });
 
     // Use analytics directly from context
@@ -84,64 +96,101 @@ export default function DashboardOverviewComponent({ date }: DashboardOverviewPr
         }
     };
 
-    // Loading state
-    if (isLoading) {
-        return <DashboardSkeleton />;
-    }
+    // Prepare metrics data when data is available
+    const metricsData = dashboardData ? [
+        {
+            id: 'consumption',
+            title: t('metrics.todayUsage'),
+            value: `${roundUsage(dashboardData.todayData.totalKwh)} ${tCommon('units.kWh')}`,
+            description: `${dashboardData.todayData.activeMeters} of ${dashboardData.meteringPoints.length} meters ${tCommon('status.active')}`,
+            icon: Zap,
+            iconColor: 'text-blue-500',
+            onClick: () => handleMetricCardClick('consumption')
+        },
+        {
+            id: 'cost',
+            title: t('metrics.todayCost'),
+            value: `${roundCurrency(dashboardData.todayData.totalCost)} ${tCommon('units.bgn')}`,
+            description: `Avg: ${roundPrice(dashboardData.todayData.averagePrice)} ${tCommon('units.bgn')}/${tCommon('units.kWh')}`,
+            icon: DollarSign,
+            iconColor: 'text-green-500',
+            onClick: () => handleMetricCardClick('cost')
+        },
+        {
+            id: 'peak_usage',
+            title: t('metrics.peak'),
+            value: `${dashboardData.quickStats.peakUsageHour}:00`,
+            description: `Highest cost: ${dashboardData.quickStats.highestCostMeter}`,
+            icon: Clock,
+            iconColor: 'text-orange-500',
+            onClick: () => handleMetricCardClick('peak_usage')
+        },
+        {
+            id: 'potential_savings',
+            title: t('metrics.savings'),
+            value: `${roundCurrency(dashboardData.quickStats.potentialSavingsToday)} ${tCommon('units.bgn')}`,
+            description: t('overview.throughOptimization'),
+            icon: TrendingUp,
+            iconColor: 'text-purple-500',
+            onClick: () => handleMetricCardClick('potential_savings', {
+                potential_savings: dashboardData.quickStats.potentialSavingsToday
+            })
+        }
+    ] : [];
 
-    // Error state
-    if (isError) {
-        const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-        return (
-            <Alert variant="destructive">
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>Error Loading Dashboard</AlertTitle>
-                <AlertDescription>
-                    {errorMessage}
-                    <div className="mt-2 flex gap-2">
-                        <button
-                            onClick={() => refetch()}
-                            disabled={isRefetching}
-                            className="inline-flex items-center px-3 py-1 text-sm bg-destructive text-destructive-foreground rounded hover:bg-destructive/90 disabled:opacity-50"
-                        >
-                            {isRefetching ? 'Retrying...' : 'Try Again'}
-                        </button>
-                    </div>
-                </AlertDescription>
-            </Alert>
-        );
-    }
+    return (
+        <QueryStateWrapper
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
+            data={dashboardData}
+            onRefetch={() => refetch()}
+            isRefetching={isRefetching}
+            isFetching={isFetching}
+            errorTitle="Error Loading Dashboard"
+            noDataTitle={tCommon('labels.noData')}
+            noDataMessage={t('overview.noDataMessage')}
+            loadingComponent={<LoadingSkeleton variant="dashboard" />}
+        >
+            <DashboardContent
+                dashboardData={dashboardData!}
+                metricsData={metricsData}
+                isRefetching={isRefetching}
+                isFetching={isFetching}
+                onRefetch={() => refetch()}
+                analytics={{
+                    handleMeteringPointClick,
+                    handleInsightView,
+                    handleMetricCardClick,
+                    handleEfficiencyScoreClick
+                }}
+            />
+        </QueryStateWrapper>
+    );
+}
 
-    // No data state
-    if (!dashboardData) {
-        return (
-            <Alert>
-                <AlertCircle className="h-4 w-4" />
-                <AlertTitle>No Data Available</AlertTitle>
-                <AlertDescription>
-                    Dashboard data is not available at the moment.
-                    <button
-                        onClick={() => refetch()}
-                        className="ml-2 underline hover:no-underline"
-                    >
-                        Refresh
-                    </button>
-                </AlertDescription>
-            </Alert>
-        );
-    }
-
+function DashboardContent({
+    dashboardData,
+    metricsData,
+    isRefetching,
+    isFetching,
+    onRefetch,
+    analytics
+}: DashboardContentProps) {
+    const { t } = useTranslation('dashboard');
     const { customer, meteringPoints, todayData, recentInsights, quickStats } = dashboardData;
+    const { handleMeteringPointClick, handleInsightView, handleMetricCardClick, handleEfficiencyScoreClick } = analytics;
 
     return (
         <div className="space-y-6">
             {/* Header with refresh functionality */}
             <RefreshHeader
-                title="Electricity Dashboard"
-                subtitle={`Welcome back, ${customer.owner}! Here's your bakery's energy overview.`}
+                titleKey="overview.title"
+                subtitle={t('overview.welcomeMessage', { owner: customer.owner })}
                 isRefreshing={isRefetching}
                 isFetching={isFetching}
-                onRefresh={() => refetch()}
+                onRefresh={onRefetch}
+                namespace="dashboard"
                 className="mb-6"
             >
                 <div className="flex items-center space-x-2">
@@ -150,91 +199,27 @@ export default function DashboardOverviewComponent({ date }: DashboardOverviewPr
                     </Avatar>
                     <div className="space-y-1">
                         <p className="text-sm font-medium">{customer.name}</p>
-                        <p className="text-xs text-muted-foreground">{meteringPoints.length} Meters</p>
+                        <p className="text-xs text-muted-foreground">
+                            {meteringPoints.length} {t('cards.meteringPointsTitle')}
+                        </p>
                     </div>
                 </div>
             </RefreshHeader>
 
-            {/* Metric Cards */}
-            <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-                <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleMetricCardClick('consumption')}
-                >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Today's Consumption</CardTitle>
-                        <Zap className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{todayData.totalKwh.toFixed(1)} kWh</div>
-                        <p className="text-xs text-muted-foreground">
-                            {todayData.activeMeters} of {meteringPoints.length} meters active
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleMetricCardClick('cost')}
-                >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Today's Cost</CardTitle>
-                        <DollarSign className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{todayData.totalCost.toFixed(2)} BGN</div>
-                        <p className="text-xs text-muted-foreground">
-                            Avg: {todayData.averagePrice.toFixed(4)} BGN/kWh
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleMetricCardClick('peak_usage')}
-                >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Peak Usage Hour</CardTitle>
-                        <Clock className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{quickStats.peakUsageHour}:00</div>
-                        <p className="text-xs text-muted-foreground">
-                            Highest cost: {quickStats.highestCostMeter}
-                        </p>
-                    </CardContent>
-                </Card>
-
-                <Card
-                    className="cursor-pointer hover:shadow-md transition-shadow"
-                    onClick={() => handleMetricCardClick('potential_savings', {
-                        potential_savings: quickStats.potentialSavingsToday
-                    })}
-                >
-                    <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                        <CardTitle className="text-sm font-medium">Potential Savings</CardTitle>
-                        <TrendingUp className="h-4 w-4 text-muted-foreground" />
-                    </CardHeader>
-                    <CardContent>
-                        <div className="text-2xl font-bold">{quickStats.potentialSavingsToday.toFixed(2)} BGN</div>
-                        <p className="text-xs text-muted-foreground">
-                            Through optimization
-                        </p>
-                    </CardContent>
-                </Card>
-            </div>
+            {/* Metrics Grid */}
+            <MetricsGrid metrics={metricsData} columns={4} />
 
             {/* Metering Points and Insights */}
             <div className="grid gap-6 md:grid-cols-2">
                 <Card>
                     <CardHeader>
-                        <CardTitle>Metering Points</CardTitle>
+                        <CardTitle>{t('cards.meteringPointsTitle')}</CardTitle>
                         <CardDescription>
-                            Status of your bakery locations
+                            {t('overview.meteringPointsDescription')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
-                        {meteringPoints.map((meter) => (
+                        {meteringPoints.map((meter: any) => (
                             <div
                                 key={meter.id}
                                 className="flex items-center justify-between space-x-4 p-2 rounded hover:bg-muted cursor-pointer transition-colors"
@@ -254,20 +239,19 @@ export default function DashboardOverviewComponent({ date }: DashboardOverviewPr
 
                 <Card>
                     <CardHeader>
-                        <CardTitle>Recent Insights</CardTitle>
+                        <CardTitle>{t('cards.recentActivity')}</CardTitle>
                         <CardDescription>
-                            Smart recommendations for cost optimization
+                            {t('overview.insightsDescription')}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         {recentInsights.length > 0 ? (
-                            recentInsights.map((insight, index) => (
+                            recentInsights.map((insight: any, index: number) => (
                                 <Alert
                                     key={index}
                                     className="cursor-pointer hover:bg-muted/50 transition-colors"
                                     onClick={() => handleInsightView(insight, index)}
                                 >
-                                    <AlertCircle className="h-4 w-4" />
                                     <AlertDescription className="text-sm">
                                         {insight}
                                     </AlertDescription>
@@ -275,7 +259,7 @@ export default function DashboardOverviewComponent({ date }: DashboardOverviewPr
                             ))
                         ) : (
                             <p className="text-sm text-muted-foreground">
-                                No insights available for today. Check back later!
+                                {t('overview.noInsightsMessage')}
                             </p>
                         )}
                     </CardContent>
@@ -285,15 +269,15 @@ export default function DashboardOverviewComponent({ date }: DashboardOverviewPr
             {/* Efficiency Score */}
             <Card>
                 <CardHeader>
-                    <CardTitle>Energy Efficiency Score</CardTitle>
+                    <CardTitle>{t('metrics.efficiency')}</CardTitle>
                     <CardDescription>
-                        Your bakery's performance today
+                        {t('overview.efficiencyDescription')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
                     <div className="space-y-2">
                         <div className="flex justify-between text-sm">
-                            <span>Efficiency Score</span>
+                            <span>{t('metrics.efficiency')}</span>
                             <span>75%</span>
                         </div>
                         <Progress
@@ -303,7 +287,7 @@ export default function DashboardOverviewComponent({ date }: DashboardOverviewPr
                         />
                     </div>
                     <p className="text-xs text-muted-foreground">
-                        Based on optimal usage patterns and cost efficiency
+                        {t('overview.efficiencyBasisDescription')}
                     </p>
                 </CardContent>
             </Card>

@@ -1,4 +1,5 @@
 import { UsageRecord } from '../src/types';
+import { getHourFromTimestamp } from '../src/utils/electricity-calculations';
 import { downloadFile } from './gcs-client';
 
 function formatDatePath(date: Date): { year: string; month: string; day: string } {
@@ -99,7 +100,7 @@ export async function getPeakUsageHourForMeteringPointAndDate(
         return null;
     }
 
-    const hour = new Date(peakUsageRecord.timestamp * 1000).getHours();
+    const hour = getHourFromTimestamp(peakUsageRecord.timestamp);
     return { hour, kwh: maxUsage };
 }
 
@@ -120,7 +121,7 @@ export async function getLowestUsageHourForMeteringPointAndDate(
         return null;
     }
 
-    const hour = new Date(lowUsageRecord.timestamp * 1000).getHours();
+    const hour = getHourFromTimestamp(lowUsageRecord.timestamp);
     return { hour, kwh: minUsage };
 }
 
@@ -132,7 +133,7 @@ export async function getUsageByHourForMeteringPointAndDate(
     const usageByHour: Record<number, number> = {};
 
     for (const record of usage) {
-        const hour = new Date(record.timestamp * 1000).getHours();
+        const hour = getHourFromTimestamp(record.timestamp);
         usageByHour[hour] = (usageByHour[hour] || 0) + record.kwh;
     }
 

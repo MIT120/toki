@@ -1,6 +1,6 @@
 "use client";
 
-import { AlertCircle, DollarSign, TrendingUp, Zap } from 'lucide-react';
+import { DollarSign, TrendingUp, Zap } from 'lucide-react';
 import {
     Bar,
     CartesianGrid,
@@ -13,24 +13,25 @@ import {
     YAxis
 } from 'recharts';
 import { useHourlyDataQuery } from '../../hooks/use-hourly-data-query';
+import {
+    calculateTotalCost,
+    calculateTotalUsage,
+    formatHour,
+    roundCurrency,
+    roundPrice,
+    roundUsage
+} from '../../utils/electricity-calculations';
+import { MetricsGrid } from '../common/metrics-grid';
+import { QueryStateWrapper } from '../common/query-state-wrapper';
 import RefreshHeader from '../common/refresh-header';
-import { Alert, AlertDescription } from '../ui/alert';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
+import { StatusBadge } from '../common/status-badge';
+import type { MetricData } from '../common/types';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
-
-interface HourlyData {
-    hour: number;
-    usage: number;
-    price: number;
-    cost: number;
-}
-
-interface HourlyChartProps {
-    meteringPointId: string;
-    date: string;
-    title?: string;
-}
+import type {
+    HourlyChartContentProps,
+    HourlyChartProps,
+    TooltipProps
+} from './types';
 
 export default function HourlyChart({ meteringPointId, date, title = "Hourly Electricity Data" }: HourlyChartProps) {
     const {
@@ -47,15 +48,11 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
         staleTime: 1000 * 60 * 2, // 2 minutes
     });
 
-    const formatHour = (hour: number) => {
-        return `${hour.toString().padStart(2, '0')}:00`;
-    };
-
-    const CustomTooltip = ({ active, payload, label }: any) => {
+    const CustomTooltip = ({ active, payload, label }: TooltipProps) => {
         if (active && payload && payload.length) {
             return (
                 <div className="bg-background border rounded-lg p-3 shadow-lg">
-                    <p className="font-medium">{`Hour: ${formatHour(label)}`}</p>
+                    <p className="font-medium">{`Hour: ${formatHour(Number(label) || 0)}`}</p>
                     {payload.map((entry: any, index: number) => (
                         <p key={index} style={{ color: entry.color }} className="text-sm">
                             {`${entry.dataKey === 'usage' ? 'Usage' :
@@ -70,79 +67,108 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
         return null;
     };
 
-    if (isLoading) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>{title}</CardTitle>
-                    <CardDescription>Loading hourly data...</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="h-[400px] bg-muted rounded animate-pulse"></div>
-                </CardContent>
-            </Card>
-        );
-    }
+    // Prepare metrics data when data is available
+    const metricsData: MetricData[] = hourlyData ? (() => {
+        const usageData = hourlyData.map(item => ({
+            timestamp: item.hour * 3600, // Convert hour to fake timestamp
+            kwh: item.usage
+        }));
 
-    if (isError) {
-        const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>{title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Alert variant="destructive">
-                        <AlertCircle className="h-4 w-4" />
-                        <AlertDescription>
-                            {errorMessage}
-                            <div className="mt-2">
-                                <Button
-                                    onClick={() => refetch()}
-                                    disabled={isRefetching}
-                                    variant="outline"
-                                    size="sm"
-                                >
-                                    {isRefetching ? 'Retrying...' : 'Try Again'}
-                                </Button>
-                            </div>
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
-        );
-    }
+        const totalUsage = calculateTotalUsage(usageData);
+        const totalCost = calculateTotalCost(usageData, new Map(hourlyData.map(item => [item.hour, item.price])));
+        const avgPrice = hourlyData.length > 0 ? hourlyData.reduce((sum, item) => sum + item.price, 0) / hourlyData.length : 0;
+        const peakUsageHour = hourlyData.reduce((max, item) => item.usage > max.usage ? item : max);
+        const peakCostHour = hourlyData.reduce((max, item) => item.cost > max.cost ? item : max);
 
-    if (!hourlyData || hourlyData.length === 0) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>{title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <div className="flex items-center justify-center h-[400px] text-muted-foreground">
-                        No data available for the selected date
-                        <Button
-                            onClick={() => refetch()}
-                            disabled={isFetching}
-                            variant="outline"
-                            size="sm"
-                            className="ml-4"
-                        >
-                            {isFetching ? 'Refreshing...' : 'Refresh'}
-                        </Button>
-                    </div>
-                </CardContent>
-            </Card>
-        );
-    }
+        return [
+            {
+                id: 'usage',
+                title: 'Total Usage',
+                value: `${roundUsage(totalUsage)} kWh`,
+                icon: Zap,
+                iconColor: 'text-blue-500'
+            },
+            {
+                id: 'cost',
+                title: 'Total Cost',
+                value: `${roundCurrency(totalCost)} BGN`,
+                icon: DollarSign,
+                iconColor: 'text-green-500'
+            },
+            {
+                id: 'price',
+                title: 'Avg Price',
+                value: roundPrice(avgPrice),
+                description: 'BGN/kWh',
+                icon: TrendingUp,
+                iconColor: 'text-orange-500'
+            },
+            {
+                id: 'peak',
+                title: 'Peak Usage',
+                value: formatHour(peakUsageHour.hour),
+                description: `${roundUsage(peakUsageHour.usage)} kWh`,
+                icon: TrendingUp,
+                iconColor: 'text-purple-500',
+                badge: <StatusBadge
+                    status={peakCostHour.hour === peakUsageHour.hour ? "high" : "low"}
+                    label={peakCostHour.hour === peakUsageHour.hour ? "High Cost" : "Normal"}
+                />
+            }
+        ];
+    })() : [];
 
-    const totalUsage = hourlyData.reduce((sum, item) => sum + item.usage, 0);
-    const totalCost = hourlyData.reduce((sum, item) => sum + item.cost, 0);
-    const avgPrice = hourlyData.reduce((sum, item) => sum + item.price, 0) / hourlyData.length;
-    const peakUsageHour = hourlyData.reduce((max, item) => item.usage > max.usage ? item : max);
-    const peakCostHour = hourlyData.reduce((max, item) => item.cost > max.cost ? item : max);
+    return (
+        <QueryStateWrapper
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
+            data={hourlyData}
+            isEmpty={!hourlyData || hourlyData.length === 0}
+            onRefetch={() => refetch()}
+            isRefetching={isRefetching}
+            isFetching={isFetching}
+            errorTitle="Error Loading Hourly Data"
+            noDataTitle="No Data Available"
+            noDataMessage={`No data available for ${new Date(date).toLocaleDateString()}`}
+            loadingComponent={
+                <Card>
+                    <CardHeader>
+                        <CardTitle>{title}</CardTitle>
+                        <CardDescription>Loading hourly data...</CardDescription>
+                    </CardHeader>
+                    <CardContent>
+                        <div className="h-[400px] bg-muted rounded animate-pulse"></div>
+                    </CardContent>
+                </Card>
+            }
+        >
+            <HourlyChartContent
+                title={title}
+                date={date}
+                hourlyData={hourlyData!}
+                metricsData={metricsData}
+                isRefetching={isRefetching}
+                isFetching={isFetching}
+                onRefetch={() => refetch()}
+                CustomTooltip={CustomTooltip}
+            />
+        </QueryStateWrapper>
+    );
+}
 
+
+
+function HourlyChartContent({
+    title,
+    date,
+    hourlyData,
+    metricsData,
+    isRefetching,
+    isFetching,
+    onRefetch,
+    CustomTooltip
+}: HourlyChartContentProps) {
     return (
         <div className="space-y-4">
             {/* Header with refresh functionality */}
@@ -151,54 +177,11 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
                 subtitle={`Hourly breakdown for ${new Date(date).toLocaleDateString()}`}
                 isRefreshing={isRefetching}
                 isFetching={isFetching}
-                onRefresh={() => refetch()}
+                onRefresh={onRefetch}
             />
 
-            <div className="grid gap-4 grid-cols-1 sm:grid-cols-2 lg:grid-cols-4">
-                <Card>
-                    <CardContent className="flex items-center justify-between p-4 lg:p-6">
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Total Usage</p>
-                            <p className="text-xl lg:text-2xl font-bold">{totalUsage.toFixed(1)} kWh</p>
-                        </div>
-                        <Zap className="h-6 w-6 lg:h-8 lg:w-8 text-blue-500" />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="flex items-center justify-between p-4 lg:p-6">
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Total Cost</p>
-                            <p className="text-xl lg:text-2xl font-bold">{totalCost.toFixed(2)} BGN</p>
-                        </div>
-                        <DollarSign className="h-6 w-6 lg:h-8 lg:w-8 text-green-500" />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="flex items-center justify-between p-4 lg:p-6">
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Avg Price</p>
-                            <p className="text-xl lg:text-2xl font-bold">{avgPrice.toFixed(4)}</p>
-                            <p className="text-xs text-muted-foreground">BGN/kWh</p>
-                        </div>
-                        <TrendingUp className="h-6 w-6 lg:h-8 lg:w-8 text-orange-500" />
-                    </CardContent>
-                </Card>
-
-                <Card>
-                    <CardContent className="flex items-center justify-between p-4 lg:p-6">
-                        <div>
-                            <p className="text-sm font-medium text-muted-foreground">Peak Usage</p>
-                            <p className="text-xl lg:text-2xl font-bold">{formatHour(peakUsageHour.hour)}</p>
-                            <p className="text-xs text-muted-foreground">{peakUsageHour.usage.toFixed(1)} kWh</p>
-                        </div>
-                        <Badge variant={peakCostHour.hour === peakUsageHour.hour ? "destructive" : "secondary"}>
-                            {peakCostHour.hour === peakUsageHour.hour ? "High Cost" : "Normal"}
-                        </Badge>
-                    </CardContent>
-                </Card>
-            </div>
+            {/* Metrics Grid */}
+            <MetricsGrid metrics={metricsData} columns={4} />
 
             <Card>
                 <CardHeader>

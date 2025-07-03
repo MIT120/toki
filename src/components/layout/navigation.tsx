@@ -12,6 +12,8 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useIsHydrated } from '../../hooks/use-hydration-safe';
+import { useTranslation } from '../../hooks/use-translation';
+import { LanguageSelector } from '../common/language-selector';
 import { Avatar, AvatarFallback } from '../ui/avatar';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -22,6 +24,8 @@ interface NavigationProps {
 }
 
 export default function Navigation({ children }: NavigationProps) {
+    const { t } = useTranslation('navigation');
+    const { t: tCommon } = useTranslation('common');
     const [notifications, setNotifications] = useState(3);
     const [currentTime, setCurrentTime] = useState<string>('');
     const isHydrated = useIsHydrated();
@@ -38,10 +42,10 @@ export default function Navigation({ children }: NavigationProps) {
     }, []);
 
     const menuItems = [
-        { icon: BarChart3, label: 'Dashboard', active: true },
-        { icon: Zap, label: 'Energy Usage', active: false },
-        { icon: Settings, label: 'Settings', active: false },
-        { icon: HelpCircle, label: 'Help', active: false },
+        { icon: BarChart3, label: t('menu.dashboard'), active: true },
+        { icon: Zap, label: t('menu.consumption'), active: false },
+        { icon: Settings, label: t('menu.settings'), active: false },
+        { icon: HelpCircle, label: t('menu.help'), active: false },
     ];
 
     return (
@@ -52,7 +56,7 @@ export default function Navigation({ children }: NavigationProps) {
                         <SheetTrigger asChild>
                             <Button variant="ghost" size="icon" className="md:hidden">
                                 <Menu className="h-5 w-5" />
-                                <span className="sr-only">Toggle menu</span>
+                                <span className="sr-only">{t('actions.toggleMenu')}</span>
                             </Button>
                         </SheetTrigger>
                         <SheetContent side="left" className="w-[300px] sm:w-[400px]">
@@ -74,6 +78,12 @@ export default function Navigation({ children }: NavigationProps) {
                                         </Button>
                                     ))}
                                 </div>
+                                <div className="px-4 pt-4 border-t">
+                                    <div className="flex items-center justify-between">
+                                        <span className="text-sm font-medium">{tCommon('labels.language')}</span>
+                                        <LanguageSelector variant="select" size="sm" />
+                                    </div>
+                                </div>
                             </nav>
                         </SheetContent>
                     </Sheet>
@@ -84,7 +94,7 @@ export default function Navigation({ children }: NavigationProps) {
                             <span className="text-xl font-bold hidden md:block">Strahil's Bakery</span>
                         </div>
                         <Badge variant="outline" className="hidden md:flex">
-                            Electricity Management
+                            {t('menu.electricityManagement')}
                         </Badge>
                     </div>
 
@@ -94,11 +104,13 @@ export default function Navigation({ children }: NavigationProps) {
                                 <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
                                 <input
                                     type="search"
-                                    placeholder="Search..."
+                                    placeholder={tCommon('placeholders.searchPlaceholder')}
                                     className="pl-8 pr-4 py-2 text-sm bg-muted/50 border border-input rounded-md w-[300px] focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"
                                 />
                             </div>
                         </div>
+
+                        <LanguageSelector variant="button" size="sm" />
 
                         <Button variant="ghost" size="icon" className="relative">
                             <Bell className="h-4 w-4" />
@@ -110,7 +122,7 @@ export default function Navigation({ children }: NavigationProps) {
                                     {notifications}
                                 </Badge>
                             )}
-                            <span className="sr-only">Notifications</span>
+                            <span className="sr-only">{t('menu.notifications')}</span>
                         </Button>
 
                         <div className="flex items-center space-x-2">
@@ -146,16 +158,16 @@ export default function Navigation({ children }: NavigationProps) {
                         </div>
 
                         <div className="flex items-center space-x-4 text-sm text-muted-foreground">
-                            <span>Built with Next.js & TypeScript</span>
+                            <span>{t('footer.builtWith')}</span>
                             <span>•</span>
-                            <span>Google Cloud Storage</span>
+                            <span>{t('footer.cloudStorage')}</span>
                             <span>•</span>
-                            <span>Real-time Analytics</span>
+                            <span>{t('footer.realTimeAnalytics')}</span>
                         </div>
 
                         <div className="flex items-center space-x-2 text-xs text-muted-foreground">
                             {isHydrated && currentTime && (
-                                <span>Last updated: {currentTime}</span>
+                                <span>{t('footer.lastUpdated')}: {currentTime}</span>
                             )}
                         </div>
                     </div>

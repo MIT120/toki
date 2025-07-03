@@ -2,6 +2,7 @@
 
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import LoadingSkeleton from '../common/loading-skeleton';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '../ui/card';
@@ -197,14 +198,7 @@ export default function DateSelector({
                             </Badge>
                         </div>
                         <div className="max-h-32 overflow-y-auto border rounded-md p-2">
-                            <div className="grid grid-cols-2 sm:grid-cols-3 gap-1">
-                                {Array.from({ length: 6 }).map((_, index) => (
-                                    <div
-                                        key={index}
-                                        className="h-6 bg-muted rounded animate-pulse"
-                                    />
-                                ))}
-                            </div>
+                            <LoadingSkeleton variant="default" rows={2} showHeader={false} className="space-y-1" />
                         </div>
                     </div>
                 ) : availableDates.length > 0 ? (

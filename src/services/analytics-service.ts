@@ -4,7 +4,11 @@ import { PostHog } from 'posthog-node';
 import {
     AnalyticsEventProperties,
     AnalyticsUser,
-    DashboardEventType
+    DailySummaryData,
+    DashboardEventType,
+    MonthlySummaryData,
+    ServiceResponse,
+    WeeklySummaryData
 } from '../types';
 
 // Server-side PostHog client
@@ -30,7 +34,7 @@ export async function trackEventAction(
     event: DashboardEventType | string,
     properties?: AnalyticsEventProperties,
     userId?: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     try {
         const posthog = getPostHogServer();
 
@@ -60,7 +64,7 @@ export async function trackEventAction(
 export async function identifyUserAction(
     userId: string,
     userProperties: AnalyticsUser
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     try {
         const posthog = getPostHogServer();
 
@@ -86,7 +90,7 @@ export async function trackPageViewAction(
     userId: string,
     pagePath: string,
     properties?: AnalyticsEventProperties
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     try {
         return await trackEventAction(
             '$pageview',
@@ -115,7 +119,7 @@ export async function trackDashboardViewAction(
         loadTime?: number;
         date?: string;
     }
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     return await trackEventAction(
         'dashboard_viewed',
         {
@@ -135,7 +139,7 @@ export async function trackMeteringPointInteractionAction(
     meteringPointName: string,
     actionType: 'view' | 'select' | 'analyze',
     properties?: AnalyticsEventProperties
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     return await trackEventAction(
         'metering_point_selected',
         {
@@ -158,7 +162,7 @@ export async function trackCostAnalysisAction(
         peakUsageHour: number;
         potentialSavings?: number;
     }
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     return await trackEventAction(
         'cost_analysis_viewed',
         {
@@ -177,7 +181,7 @@ export async function trackInsightViewAction(
     insightType: string,
     urgencyLevel: 'low' | 'medium' | 'high',
     potentialSavings?: number
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     return await trackEventAction(
         'insights_viewed',
         {
@@ -195,9 +199,9 @@ export async function trackErrorAction(
     context?: {
         component?: string;
         apiEndpoint?: string;
-        userAction?: string;
+        userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
     }
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     return await trackEventAction(
         'error_occurred',
         {
@@ -205,7 +209,7 @@ export async function trackErrorAction(
             error_stack: error.stack,
             component_name: context?.component,
             api_endpoint: context?.apiEndpoint,
-            action_type: context?.userAction as any,
+            action_type: context?.userAction,
         },
         userId
     );
@@ -219,7 +223,7 @@ export async function trackPerformanceAction(
         apiEndpoint?: string;
         dataPointsCount?: number;
     }
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     return await trackEventAction(
         'performance_measured',
         {
@@ -237,7 +241,7 @@ export async function trackFilterApplicationAction(
     filterType: string,
     filterValue: string,
     componentName: string
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     return await trackEventAction(
         'filter_applied',
         {
@@ -254,12 +258,12 @@ export async function trackDataExportAction(
     exportType: string,
     dataRange: string,
     recordCount: number
-): Promise<{ success: boolean; error?: string }> {
+): Promise<ServiceResponse<void>> {
     return await trackEventAction(
         'data_exported',
         {
             action_type: 'export',
-            analysis_type: exportType as any,
+            analysis_type: exportType as 'hourly' | 'daily' | 'weekly' | 'monthly',
             date_range: dataRange,
             data_points_count: recordCount,
         },
@@ -268,7 +272,7 @@ export async function trackDataExportAction(
 }
 
 // Utility function to flush events (useful for testing or before app shutdown)
-export async function flushAnalyticsAction(): Promise<{ success: boolean; error?: string }> {
+export async function flushAnalyticsAction(): Promise<ServiceResponse<void>> {
     try {
         if (posthogServer) {
             await posthogServer.flush();
@@ -284,7 +288,7 @@ export async function flushAnalyticsAction(): Promise<{ success: boolean; error?
 }
 
 // Shutdown function to properly close PostHog connection
-export async function shutdownAnalyticsAction(): Promise<{ success: boolean; error?: string }> {
+export async function shutdownAnalyticsAction(): Promise<ServiceResponse<void>> {
     try {
         if (posthogServer) {
             await posthogServer.shutdown();
@@ -304,11 +308,11 @@ export async function shutdownAnalyticsAction(): Promise<{ success: boolean; err
 export async function getDailySummaryAction(
     meteringPointId: string,
     date: string
-): Promise<{ success: boolean; data?: any; error?: string }> {
+): Promise<ServiceResponse<DailySummaryData>> {
     try {
         // This would typically fetch from your database or analytics service
         // For now, returning mock data structure
-        const mockData = {
+        const mockData: DailySummaryData = {
             meteringPointId,
             date,
             totalConsumption: 0,
@@ -331,17 +335,25 @@ export async function getDailySummaryAction(
 export async function getWeeklySummaryAction(
     meteringPointId: string,
     weekStartDate: string
-): Promise<{ success: boolean; data?: any; error?: string }> {
+): Promise<ServiceResponse<WeeklySummaryData>> {
     try {
         // This would typically fetch from your database or analytics service
         // For now, returning mock data structure
-        const mockData = {
+        const mockData: WeeklySummaryData = {
             meteringPointId,
             weekStartDate,
             totalConsumption: 0,
             totalCost: 0,
+            peakUsageHour: 0,
+            averageUsage: 0,
+            events: [],
             dailyBreakdown: [],
-            trends: {}
+            trends: {
+                usageChange: 0,
+                costChange: 0,
+                efficiencyScore: 0,
+                pattern: 'stable'
+            }
         };
 
         return { success: true, data: mockData };
@@ -358,18 +370,26 @@ export async function getMonthlySummaryAction(
     meteringPointId: string,
     month: number,
     year: number
-): Promise<{ success: boolean; data?: any; error?: string }> {
+): Promise<ServiceResponse<MonthlySummaryData>> {
     try {
         // This would typically fetch from your database or analytics service
         // For now, returning mock data structure
-        const mockData = {
+        const mockData: MonthlySummaryData = {
             meteringPointId,
             month,
             year,
             totalConsumption: 0,
             totalCost: 0,
+            peakUsageHour: 0,
+            averageUsage: 0,
+            events: [],
             weeklyBreakdown: [],
-            monthlyTrends: {}
+            monthlyTrends: {
+                usageChange: 0,
+                costChange: 0,
+                efficiencyScore: 0,
+                pattern: 'stable'
+            }
         };
 
         return { success: true, data: mockData };

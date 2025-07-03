@@ -1,6 +1,17 @@
 import { useCallback } from 'react';
 import { useDashboardAnalytics } from '../contexts/analytics-context';
-import { AnalyticsEventProperties } from '../types';
+import {
+    trackCostAnalysisAction,
+    trackDataExportAction,
+    trackErrorAction,
+    trackEventAction,
+    trackFilterApplicationAction,
+    trackInsightViewAction,
+    trackMeteringPointInteractionAction,
+    trackPerformanceAction,
+} from '../services/analytics-service';
+import { AnalyticsCallbacks, AnalyticsContext, AnalyticsEventProperties, AnalyticsProperties, RefreshAnalyticsOptions } from '../types';
+import { logError } from './error-logger';
 
 /**
  * Centralized analytics event definitions
@@ -400,4 +411,457 @@ export function useDashboardQueryAnalytics(enableAnalytics = true) {
         componentName: 'DashboardQuery',
         apiEndpoint: '/api/dashboard',
     });
-} 
+}
+
+export const createAnalyticsWrapper = (baseContext: AnalyticsContext) => {
+    const wrapWithAnalytics = <T extends (...args: unknown[]) => Promise<unknown>>(
+        fn: T,
+        eventName: string,
+        getAnalyticsProps: (...args: Parameters<T>) => AnalyticsProperties = () => ({}),
+        callbacks?: AnalyticsCallbacks<Awaited<ReturnType<T>>>
+    ): T => {
+        return (async (...args: Parameters<T>) => {
+            const startTime = performance.now();
+            const analyticsProps = getAnalyticsProps(...args);
+
+            try {
+                const result = await fn(...args);
+                const endTime = performance.now();
+                const loadTime = endTime - startTime;
+
+                // Track successful execution
+                const successProps = callbacks?.onSuccess?.(result as Awaited<ReturnType<T>>) || {};
+                await trackEventAction(eventName, {
+                    ...analyticsProps,
+                    ...successProps,
+                    load_time: loadTime,
+                    success: true,
+                }, baseContext.userId);
+
+                return result;
+            } catch (error) {
+                const endTime = performance.now();
+                const loadTime = endTime - startTime;
+
+                // Track error
+                const errorProps = callbacks?.onError?.(error as Error) || {};
+                await trackEventAction(eventName, {
+                    ...analyticsProps,
+                    ...errorProps,
+                    load_time: loadTime,
+                    success: false,
+                    error_message: error instanceof Error ? error.message : 'Unknown error',
+                }, baseContext.userId);
+
+                // Also log to error logger
+                logError(error as Error, {
+                    level: 'error',
+                    context: {
+                        component: baseContext.component,
+                        userId: baseContext.userId,
+                        userAction: baseContext.userAction,
+                        additionalData: analyticsProps,
+                    },
+                });
+
+                throw error;
+            }
+        }) as T;
+    };
+
+    return {
+        wrapWithAnalytics,
+
+        // Dashboard analytics
+        wrapDashboardAction: <T extends (...args: unknown[]) => Promise<unknown>>(
+            fn: T,
+            additionalProps: AnalyticsProperties = {}
+        ) => wrapWithAnalytics(
+            fn,
+            'dashboard_action',
+            () => ({
+                component_name: 'dashboard',
+                ...additionalProps,
+            })
+        ),
+
+        // Cost analysis analytics
+        wrapCostAnalysisAction: <T extends (...args: unknown[]) => Promise<unknown>>(
+            fn: T,
+            additionalProps: AnalyticsProperties = {}
+        ) => wrapWithAnalytics(
+            fn,
+            'cost_analysis_action',
+            () => ({
+                component_name: 'cost-analysis',
+                ...additionalProps,
+            })
+        ),
+
+        // Hourly data analytics
+        wrapHourlyDataAction: <T extends (...args: unknown[]) => Promise<unknown>>(
+            fn: T,
+            meteringPointId: string,
+            additionalProps: AnalyticsProperties = {}
+        ) => wrapWithAnalytics(
+            fn,
+            'hourly_data_action',
+            () => ({
+                component_name: 'hourly-data',
+                metering_point_id: meteringPointId,
+                ...additionalProps,
+            })
+        ),
+
+        // Insights analytics
+        wrapInsightsAction: <T extends (...args: unknown[]) => Promise<unknown>>(
+            fn: T,
+            additionalProps: AnalyticsProperties = {}
+        ) => wrapWithAnalytics(
+            fn,
+            'insights_action',
+            () => ({
+                component_name: 'insights',
+                ...additionalProps,
+            })
+        ),
+
+        // Generic action wrapper
+        wrapAction: <T extends (...args: unknown[]) => Promise<unknown>>(
+            fn: T,
+            eventName: string,
+            getProps: (...args: Parameters<T>) => AnalyticsProperties = () => ({}),
+            callbacks?: AnalyticsCallbacks<Awaited<ReturnType<T>>>
+        ) => wrapWithAnalytics(fn, eventName, getProps, callbacks),
+
+        // Performance tracking
+        trackPerformance: async (componentName: string, operation: () => Promise<unknown>) => {
+            const startTime = performance.now();
+            try {
+                const result = await operation();
+                const endTime = performance.now();
+                const loadTime = endTime - startTime;
+
+                await trackPerformanceAction(baseContext.userId, {
+                    componentName,
+                    loadTime,
+                });
+
+                return result;
+            } catch (error) {
+                const endTime = performance.now();
+                const loadTime = endTime - startTime;
+
+                await trackPerformanceAction(baseContext.userId, {
+                    componentName,
+                    loadTime,
+                });
+
+                await trackErrorAction(baseContext.userId, error as Error, {
+                    component: componentName,
+                    userAction: baseContext.userAction,
+                });
+
+                throw error;
+            }
+        },
+
+        // Simplified performance wrapper
+        withPerformanceTracking: <T extends (...args: unknown[]) => Promise<unknown>>(
+            fn: T,
+            componentName: string
+        ) => {
+            return (async (...args: Parameters<T>) => {
+                return await this.trackPerformance(componentName, () => fn(...args));
+            }) as T;
+        },
+
+        // Error tracking
+        trackError: async (error: Error, context: { component?: string; userAction?: string } = {}) => {
+            await trackErrorAction(baseContext.userId, error, {
+                component: context.component || baseContext.component,
+                userAction: context.userAction || baseContext.userAction,
+            });
+
+            logError(error, {
+                level: 'error',
+                context: {
+                    component: context.component || baseContext.component,
+                    userId: baseContext.userId,
+                    userAction: context.userAction || baseContext.userAction,
+                },
+            });
+        },
+
+        // Event tracking
+        trackEvent: async (eventName: string, properties: AnalyticsProperties = {}) => {
+            await trackEventAction(eventName, {
+                ...properties,
+                component_name: baseContext.component,
+                timestamp: new Date().toISOString(),
+            }, baseContext.userId);
+        },
+
+        // Data loading wrapper with analytics
+        wrapDataLoader: <T>(
+            loader: () => Promise<T>,
+            options: {
+                componentName: string;
+                dataType: string;
+                additionalProps?: AnalyticsProperties;
+            }
+        ) => {
+            return this.wrapWithAnalytics(
+                loader,
+                'data_loaded',
+                () => ({
+                    component_name: options.componentName,
+                    data_type: options.dataType,
+                    ...options.additionalProps,
+                }),
+                {
+                    onSuccess: (data) => ({
+                        data_loaded: true,
+                        // Don't include the actual data in analytics for privacy
+                        data_size: Array.isArray(data) ? data.length : 1,
+                    }),
+                    onError: (error) => ({
+                        data_loaded: false,
+                        error_type: error.name,
+                    }),
+                }
+            );
+        },
+
+        // Refresh action wrapper
+        wrapRefreshAction: async (options: RefreshAnalyticsOptions) => {
+            const startTime = performance.now();
+
+            try {
+                const result = await options.refreshFn();
+                const endTime = performance.now();
+                const loadTime = endTime - startTime;
+
+                await trackEventAction('data_refreshed', {
+                    component_name: options.componentName,
+                    load_time: loadTime,
+                    success: true,
+                    ...options.additionalProps,
+                }, options.userId);
+
+                return result;
+            } catch (error) {
+                const endTime = performance.now();
+                const loadTime = endTime - startTime;
+
+                await trackEventAction('data_refresh_failed', {
+                    component_name: options.componentName,
+                    load_time: loadTime,
+                    success: false,
+                    error_message: error instanceof Error ? error.message : 'Unknown error',
+                    ...options.additionalProps,
+                }, options.userId);
+
+                await trackErrorAction(options.userId, error as Error, {
+                    component: options.componentName,
+                    userAction: 'refresh',
+                });
+
+                throw error;
+            }
+        },
+    };
+};
+
+/**
+ * Analytics wrapper functions for common dashboard actions
+ */
+
+// Dashboard view analytics
+export const trackDashboardView = async (
+    userId: string,
+    meteringPointsCount: number,
+    totalConsumption: number,
+    totalCost: number,
+    loadTime?: number,
+    additionalProps: AnalyticsEventProperties = {}
+) => {
+    const { trackDashboardView: trackView } = useDashboardAnalytics();
+    return trackView(
+        meteringPointsCount,
+        totalConsumption,
+        totalCost,
+        loadTime,
+        additionalProps
+    );
+};
+
+// Metering point interaction analytics  
+export const trackMeteringPointClick = async (
+    userId: string,
+    meteringPointId: string,
+    meteringPointName: string,
+    additionalProps: AnalyticsEventProperties = {}
+) => {
+    return trackMeteringPointInteractionAction(
+        userId,
+        meteringPointId,
+        meteringPointName,
+        'select',
+        {
+            action_type: 'click',
+            ...additionalProps,
+        }
+    );
+};
+
+// Cost analysis analytics
+export const trackCostAnalysisView = async (
+    userId: string,
+    meteringPointId: string,
+    analysisData: {
+        totalKwh: number;
+        totalCost: number;
+        averagePrice: number;
+        peakUsageHour: number;
+        potentialSavings?: number;
+    },
+    additionalProps: AnalyticsEventProperties = {}
+) => {
+    return trackCostAnalysisAction(userId, meteringPointId, {
+        ...analysisData,
+        ...additionalProps,
+    });
+};
+
+// Insight view analytics
+export const trackInsightInteraction = async (
+    userId: string,
+    insightType: string,
+    urgencyLevel: 'low' | 'medium' | 'high',
+    potentialSavings?: number,
+    additionalProps: AnalyticsEventProperties = {}
+) => {
+    return trackInsightViewAction(userId, insightType, urgencyLevel, potentialSavings);
+};
+
+// Filter application analytics
+export const trackFilterApplication = async (
+    userId: string,
+    filterType: string,
+    filterValue: string,
+    componentName: string,
+    additionalProps: AnalyticsEventProperties = {}
+) => {
+    return trackFilterApplicationAction(userId, filterType, filterValue, componentName);
+};
+
+// Data export analytics
+export const trackDataExport = async (
+    userId: string,
+    exportType: string,
+    dataRange: string,
+    recordCount: number,
+    additionalProps: AnalyticsEventProperties = {}
+) => {
+    return trackDataExportAction(userId, exportType, dataRange, recordCount);
+};
+
+// Error tracking analytics
+export const trackError = async (
+    userId: string,
+    error: Error,
+    context: {
+        component?: string;
+        apiEndpoint?: string;
+        userAction?: string;
+    } = {},
+    additionalProps: AnalyticsEventProperties = {}
+) => {
+    return trackErrorAction(userId, error, context);
+};
+
+// Performance tracking analytics
+export const trackPerformance = async (
+    userId: string,
+    componentName: string,
+    loadTime: number,
+    additionalProps: AnalyticsEventProperties = {}
+) => {
+    return trackPerformanceAction(userId, {
+        componentName,
+        loadTime,
+        ...additionalProps,
+    });
+};
+
+// Generic event tracking
+export const trackCustomEvent = async (
+    userId: string,
+    eventName: string,
+    properties: AnalyticsEventProperties = {}
+) => {
+    return trackEventAction(eventName, properties, userId);
+};
+
+// Wrapper for async operations with automatic performance and error tracking
+export const withAnalytics = async <T>(
+    operation: () => Promise<T>,
+    userId: string,
+    componentName: string,
+    eventName: string,
+    additionalProps: AnalyticsEventProperties = {}
+): Promise<T> => {
+    const startTime = performance.now();
+
+    try {
+        const result = await operation();
+        const endTime = performance.now();
+        const loadTime = endTime - startTime;
+
+        // Track successful operation
+        await trackEventAction(eventName, {
+            component_name: componentName,
+            load_time: loadTime,
+            success: true,
+            ...additionalProps,
+        }, userId);
+
+        return result;
+    } catch (error) {
+        const endTime = performance.now();
+        const loadTime = endTime - startTime;
+
+        // Track failed operation
+        await trackEventAction(`${eventName}_failed`, {
+            component_name: componentName,
+            load_time: loadTime,
+            success: false,
+            error_message: error instanceof Error ? error.message : 'Unknown error',
+            ...additionalProps,
+        }, userId);
+
+        // Track error details
+        await trackErrorAction(userId, error as Error, {
+            component: componentName,
+        });
+
+        throw error;
+    }
+};
+
+// Specific wrapper for data refresh operations
+export const trackRefreshAction = async (
+    refreshFn: () => Promise<unknown>,
+    userId: string,
+    componentName: string,
+    additionalProps?: AnalyticsEventProperties
+) => {
+    return withAnalytics(
+        refreshFn,
+        userId,
+        componentName,
+        'data_refreshed',
+        additionalProps
+    );
+}; 

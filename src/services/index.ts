@@ -1,6 +1,7 @@
 export * from './analytics-service';
 export * from './dashboard-service';
 export * from './date-service';
+export * from './electricity-calculation-service';
 export * from './electricity-service';
 export * from './feature-flag-service';
 export * from './metering-point-service';

@@ -1,4 +1,5 @@
 import { PriceRecord } from '../src/types';
+import { getHourFromTimestamp } from '../src/utils/electricity-calculations';
 import { downloadFile } from './gcs-client';
 
 function formatDatePath(date: Date): { year: string; month: string; day: string } {
@@ -87,7 +88,7 @@ export async function getPeakPriceHourForDate(date: Date): Promise<{ hour: numbe
         return null;
     }
 
-    const hour = new Date(peakPriceRecord.timestamp * 1000).getHours();
+    const hour = getHourFromTimestamp(peakPriceRecord.timestamp);
     return { hour, price: maxPrice };
 }
 
@@ -105,6 +106,6 @@ export async function getLowestPriceHourForDate(date: Date): Promise<{ hour: num
         return null;
     }
 
-    const hour = new Date(lowPriceRecord.timestamp * 1000).getHours();
+    const hour = getHourFromTimestamp(lowPriceRecord.timestamp);
     return { hour, price: minPrice };
 } 

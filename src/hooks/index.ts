@@ -7,4 +7,5 @@ export { useHourlyDataQuery } from './use-hourly-data-query';
 export { useHydrationSafeFeatureFlag, useIsHydrated } from './use-hydration-safe';
 export { useInsightsQuery } from './use-insights-query';
 export { useInvalidateElectricityData } from './use-invalidate-queries';
+export { useTranslation } from './use-translation';
 

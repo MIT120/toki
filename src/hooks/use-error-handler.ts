@@ -1,6 +1,6 @@
 import { useCallback } from 'react';
 import { toast } from 'sonner';
-import { addBreadcrumb, logError, type ErrorContext } from '../utils/error-logger';
+import { addSentryBreadcrumb, logError, type ErrorContext } from '../utils/error-logger';
 
 export interface UseErrorHandlerOptions {
     context?: ErrorContext;
@@ -55,9 +55,9 @@ export function useErrorHandler(options: UseErrorHandlerOptions = {}) {
             additionalContext?: Partial<ErrorContext>
         ): Promise<T | null> => {
             try {
-                addBreadcrumb(`Starting ${operationName}`, 'user_action', 'info');
+                addSentryBreadcrumb(`Starting ${operationName}`, 'user_action', 'info');
                 const result = await asyncOperation();
-                addBreadcrumb(`${operationName} completed successfully`, 'user_action', 'info');
+                addSentryBreadcrumb(`${operationName} completed successfully`, 'user_action', 'info');
                 return result;
             } catch (error) {
                 const errorInstance = error instanceof Error ? error : new Error(String(error));

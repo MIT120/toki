@@ -35,8 +35,23 @@ export * from './ui/tooltip';
 
 // Common Components
 export { ErrorBoundary, withErrorBoundary } from './common/error-boundary';
+export { LanguageSelector } from './common/language-selector';
+export { default as LoadingSkeleton } from './common/loading-skeleton';
+export { default as MetricCard } from './common/metric-card';
+export { default as MetricsGrid } from './common/metrics-grid';
+export { default as QueryStateWrapper } from './common/query-state-wrapper';
+export { default as RecommendationsList } from './common/recommendations-list';
 export { default as RefreshHeader } from './common/refresh-header';
+export { getEfficiencyStatusBadge, getPriceStatusBadge, getUsageStatusBadge, default as StatusBadge } from './common/status-badge';
 
-// New components
+// Component Types
+export type * from './analysis/types';
+export type * from './charts/types';
+export type * from './common/types';
+export type * from './dashboard/types';
+export type * from './insights/types';
+export type * from './tables/types';
+
+// Layout Components
 export { default as Navigation } from './layout/navigation';
 

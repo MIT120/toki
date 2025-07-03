@@ -1,11 +1,7 @@
-import { addBreadcrumb, createAppError, ErrorCodes, logError, type ErrorCode, type ErrorContext } from './error-logger';
+import { ServiceResponse } from '../types';
+import { addSentryBreadcrumb, createAppError, ErrorCodes, logError, type ErrorCode, type ErrorContext } from './error-logger';
 
-export interface ServiceResponse<T = any> {
-    success: boolean;
-    data?: T;
-    error?: string;
-    errorCode?: ErrorCode;
-}
+export type { ServiceResponse };
 
 export interface ServiceOptions {
     context?: ErrorContext;
@@ -33,7 +29,7 @@ export async function executeWithErrorHandling<T>(
 ): Promise<ServiceResponse<T>> {
     const { context = {}, retries = 0, timeout } = options;
 
-    addBreadcrumb(`Starting ${operationName}`, 'service', 'info');
+    addSentryBreadcrumb(`Starting ${operationName}`, 'service', 'info');
 
     let lastError: Error | null = null;
     let attempt = 0;
@@ -55,7 +51,7 @@ export async function executeWithErrorHandling<T>(
             }
 
             const duration = Date.now() - startTime;
-            addBreadcrumb(
+            addSentryBreadcrumb(
                 `${operationName} completed successfully in ${duration}ms`,
                 'service',
                 'info'
@@ -86,7 +82,7 @@ export async function executeWithErrorHandling<T>(
                     },
                 });
 
-                addBreadcrumb(
+                addSentryBreadcrumb(
                     `${operationName} failed, retrying (${attempt}/${retries})`,
                     'service',
                     'warning'
@@ -103,7 +99,7 @@ export async function executeWithErrorHandling<T>(
                     },
                 });
 
-                addBreadcrumb(`${operationName} failed after ${retries + 1} attempts`, 'service', 'error');
+                addSentryBreadcrumb(`${operationName} failed after ${retries + 1} attempts`, 'service', 'error');
             }
         }
     }
@@ -244,13 +240,13 @@ export async function withPerformanceTracking<T>(
 ): Promise<T> {
     const startTime = Date.now();
 
-    addBreadcrumb(`Performance tracking started for ${operationName}`, 'performance', 'info');
+    addSentryBreadcrumb(`Performance tracking started for ${operationName}`, 'performance', 'info');
 
     try {
         const result = await operation();
         const duration = Date.now() - startTime;
 
-        addBreadcrumb(
+        addSentryBreadcrumb(
             `${operationName} completed in ${duration}ms`,
             'performance',
             'info'
@@ -278,7 +274,7 @@ export async function withPerformanceTracking<T>(
     } catch (error) {
         const duration = Date.now() - startTime;
 
-        addBreadcrumb(
+        addSentryBreadcrumb(
             `${operationName} failed after ${duration}ms`,
             'performance',
             'error'

@@ -1,21 +1,9 @@
 "use client";
 
+import { useTranslation } from '@/hooks/use-translation';
 import { RefreshCw } from 'lucide-react';
 import { Button } from '../ui/button';
-
-interface RefreshHeaderProps {
-    title: string;
-    subtitle?: string;
-    isRefreshing?: boolean;
-    isFetching?: boolean;
-    onRefresh: () => void;
-    showLastUpdated?: boolean;
-    lastUpdated?: Date;
-    refreshButtonVariant?: "default" | "destructive" | "outline" | "secondary" | "ghost" | "link";
-    refreshButtonSize?: "default" | "sm" | "lg" | "icon";
-    className?: string;
-    children?: React.ReactNode;
-}
+import type { RefreshHeaderProps } from './types';
 
 export default function RefreshHeader({
     title,
@@ -28,8 +16,13 @@ export default function RefreshHeader({
     refreshButtonVariant = "outline",
     refreshButtonSize = "sm",
     className = "",
-    children
+    children,
+    titleKey,
+    subtitleKey,
+    namespace = 'common'
 }: RefreshHeaderProps) {
+    const { t } = useTranslation(namespace);
+
     const formatLastUpdated = (date: Date) => {
         return new Intl.DateTimeFormat('en-US', {
             hour: '2-digit',
@@ -40,21 +33,23 @@ export default function RefreshHeader({
     };
 
     const isLoading = isRefreshing || isFetching;
+    const displayTitle = titleKey ? t(titleKey) : title;
+    const displaySubtitle = subtitleKey ? t(subtitleKey) : subtitle;
 
     return (
         <div className={`flex items-center justify-between ${className}`}>
             <div className="space-y-1">
                 <div className="flex items-center gap-3">
-                    <h3 className="text-lg font-semibold">{title}</h3>
+                    <h3 className="text-lg font-semibold">{displayTitle}</h3>
                     {isLoading && (
                         <div className="flex items-center text-sm text-muted-foreground">
                             <div className="animate-spin rounded-full h-3 w-3 border-2 border-muted-foreground border-t-transparent mr-2" />
-                            {isRefreshing ? 'Refreshing...' : 'Loading...'}
+                            {isRefreshing ? t('labels.loading') : t('labels.loading')}
                         </div>
                     )}
                 </div>
-                {subtitle && (
-                    <p className="text-sm text-muted-foreground">{subtitle}</p>
+                {displaySubtitle && (
+                    <p className="text-sm text-muted-foreground">{displaySubtitle}</p>
                 )}
                 {showLastUpdated && lastUpdated && (
                     <p className="text-xs text-muted-foreground">
@@ -73,7 +68,7 @@ export default function RefreshHeader({
                     className="flex items-center gap-2"
                 >
                     <RefreshCw className={`h-4 w-4 ${isLoading ? 'animate-spin' : ''}`} />
-                    {isRefreshing ? 'Refreshing...' : 'Refresh'}
+                    {isRefreshing ? t('labels.loading') : t('buttons.refresh')}
                 </Button>
             </div>
         </div>

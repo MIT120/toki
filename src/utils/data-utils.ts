@@ -1,4 +1,5 @@
 import { PriceRecord, UsageRecord } from '../types';
+import { getHourFromTimestamp, roundToDecimals } from './electricity-calculations';
 
 export interface DataFetchResult<T> {
     data: T[];
@@ -27,21 +28,23 @@ export async function fetchDataWithFallback<T>(
             usedMockData: false
         };
     } catch (error) {
-        console.log(`Error fetching ${dataType} data, using mock data:`, error);
+        console.error(`Error fetching ${dataType} data:`, error);
+        console.log(`Falling back to mock ${dataType} data`);
+
         return {
             data: mockDataFn(),
             usedMockData: true,
-            errors: [error instanceof Error ? error.message : String(error)]
+            errors: [error instanceof Error ? error.message : 'Unknown error']
         };
     }
 }
 
-export function processDateRange(
+export function processDateRange<T>(
     startDate: Date,
     endDate: Date,
-    processFn: (date: Date) => Promise<any>
-): Promise<any[]> {
-    const promises: Promise<any>[] = [];
+    processFn: (date: Date) => Promise<T>
+): Promise<T[]> {
+    const promises: Promise<T>[] = [];
     const currentDate = new Date(startDate);
 
     while (currentDate <= endDate) {
@@ -76,18 +79,18 @@ export function combineUsageAndPriceData(
         cost: 0
     }));
 
-    // Populate usage data
+    // Populate usage data using reusable utility
     for (const usageRecord of usage) {
-        const hour = new Date(usageRecord.timestamp * 1000).getHours();
+        const hour = getHourFromTimestamp(usageRecord.timestamp);
         const existing = hourlyMap.get(hour);
         if (existing) {
             existing.usage += usageRecord.kwh;
         }
     }
 
-    // Populate price data
+    // Populate price data using reusable utility
     for (const priceRecord of prices) {
-        const hour = new Date(priceRecord.timestamp * 1000).getHours();
+        const hour = getHourFromTimestamp(priceRecord.timestamp);
         const existing = hourlyMap.get(hour);
         if (existing) {
             existing.price = priceRecord.price;
@@ -123,7 +126,96 @@ export function validateDateRange(
     return { isValid: true };
 }
 
-export function roundToDecimals(value: number, decimals: number): number {
-    const factor = Math.pow(10, decimals);
-    return Math.round(value * factor) / factor;
+export function createTimeSeriesData<T extends { timestamp: number }>(
+    data: T[],
+    valueAccessor: (item: T) => number,
+    labelFormat: 'hour' | 'date' = 'hour'
+): Array<{ time: string; value: number; original: T }> {
+    return data.map(item => ({
+        time: labelFormat === 'hour'
+            ? `${getHourFromTimestamp(item.timestamp).toString().padStart(2, '0')}:00`
+            : new Date(item.timestamp * 1000).toISOString().split('T')[0],
+        value: valueAccessor(item),
+        original: item
+    }));
+}
+
+export function aggregateByHour<T extends { timestamp: number }>(
+    data: T[],
+    valueAccessor: (item: T) => number
+): Array<{ hour: number; total: number; count: number; average: number }> {
+    const hourlyData = new Map<number, { total: number; count: number }>();
+
+    for (const item of data) {
+        const hour = getHourFromTimestamp(item.timestamp);
+        const value = valueAccessor(item);
+
+        const existing = hourlyData.get(hour) || { total: 0, count: 0 };
+        hourlyData.set(hour, {
+            total: existing.total + value,
+            count: existing.count + 1
+        });
+    }
+
+    return Array.from(hourlyData.entries())
+        .map(([hour, { total, count }]) => ({
+            hour,
+            total: roundToDecimals(total, 4),
+            count,
+            average: roundToDecimals(total / count, 4)
+        }))
+        .sort((a, b) => a.hour - b.hour);
+}
+
+export function groupDataByDate<T extends { timestamp: number }>(
+    data: T[]
+): Map<string, T[]> {
+    const grouped = new Map<string, T[]>();
+
+    for (const item of data) {
+        const date = new Date(item.timestamp * 1000).toISOString().split('T')[0];
+        if (!grouped.has(date)) {
+            grouped.set(date, []);
+        }
+        grouped.get(date)!.push(item);
+    }
+
+    return grouped;
+}
+
+export function filterDataByDateRange<T extends { timestamp: number }>(
+    data: T[],
+    startDate: string,
+    endDate: string
+): T[] {
+    const startTimestamp = new Date(startDate).getTime() / 1000;
+    const endTimestamp = new Date(endDate).getTime() / 1000 + 86400; // End of day
+
+    return data.filter(item =>
+        item.timestamp >= startTimestamp && item.timestamp < endTimestamp
+    );
+}
+
+export function calculateDataQuality<T extends { timestamp: number }>(
+    data: T[],
+    expectedCount: number = 24
+): {
+    completeness: number;
+    hasGaps: boolean;
+    gapHours?: number[];
+} {
+    const completeness = roundToDecimals((data.length / expectedCount) * 100, 1);
+    const hasGaps = data.length < expectedCount;
+
+    let gapHours: number[] | undefined;
+    if (hasGaps && data.length > 0) {
+        const presentHours = new Set(data.map(d => getHourFromTimestamp(d.timestamp)));
+        gapHours = Array.from({ length: 24 }, (_, i) => i).filter(hour => !presentHours.has(hour));
+    }
+
+    return {
+        completeness,
+        hasGaps,
+        gapHours
+    };
 } 

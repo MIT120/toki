@@ -1,12 +1,13 @@
 import * as Sentry from '@sentry/nextjs';
 
 export interface ErrorContext {
-    userId?: string;
     component?: string;
+    userId?: string;
+    userAction?: string;
     action?: string;
     apiEndpoint?: string;
     meteringPointId?: string;
-    additionalData?: Record<string, any>;
+    additionalData?: Record<string, string | number | boolean>;
 }
 
 export interface ErrorLogOptions {
@@ -102,7 +103,7 @@ class ErrorLogger {
             level: 'error',
             context: {
                 component: 'GlobalErrorHandler',
-                action: 'window.error',
+                userAction: 'unknown',
                 additionalData: {
                     filename: event.filename,
                     lineno: event.lineno,
@@ -118,7 +119,7 @@ class ErrorLogger {
             level: 'error',
             context: {
                 component: 'GlobalErrorHandler',
-                action: 'unhandledRejection',
+                userAction: 'promise_rejection',
             },
         });
     }
@@ -128,7 +129,7 @@ class ErrorLogger {
             level: 'fatal',
             context: {
                 component: 'GlobalErrorHandler',
-                action: 'uncaughtException',
+                userAction: 'uncaughtException',
             },
         });
     }
@@ -165,16 +166,12 @@ class ErrorLogger {
                 scope.setTag('component', enhancedContext.component);
             }
 
-            if (enhancedContext.action) {
-                scope.setTag('action', enhancedContext.action);
+            if (enhancedContext.userAction) {
+                scope.setTag('user_action', enhancedContext.userAction);
             }
 
             if (enhancedContext.apiEndpoint) {
                 scope.setTag('api_endpoint', enhancedContext.apiEndpoint);
-            }
-
-            if (enhancedContext.meteringPointId) {
-                scope.setTag('metering_point_id', enhancedContext.meteringPointId);
             }
 
             // Add additional context data
@@ -228,10 +225,12 @@ class ErrorLogger {
         statusCode: number = 500,
         context?: ErrorContext
     ): AppError {
-        return new AppError(message, code, statusCode, true, context);
+        const error = new AppError(message, code, statusCode, true, context);
+        this.logError(error, { context });
+        return error;
     }
 
-    public async captureUserFeedback(
+    public async captureUserSentryFeedback(
         eventId: string,
         name: string,
         email: string,
@@ -245,7 +244,7 @@ class ErrorLogger {
         });
     }
 
-    public addBreadcrumb(message: string, category?: string, level?: 'info' | 'warning' | 'error') {
+    public addSentryBreadcrumb(message: string, category?: string, level?: 'info' | 'warning' | 'error') {
         Sentry.addBreadcrumb({
             message,
             category: category || 'custom',
@@ -254,7 +253,7 @@ class ErrorLogger {
         });
     }
 
-    public setUserContext(userId: string, email?: string, name?: string) {
+    public setUserSentryContext(userId: string, email?: string, name?: string) {
         Sentry.setUser({
             id: userId,
             email,
@@ -262,7 +261,7 @@ class ErrorLogger {
         });
     }
 
-    public clearUserContext() {
+    public clearUserSentryContext() {
         Sentry.setUser(null);
     }
 
@@ -277,7 +276,7 @@ export const logError = errorLogger.logError.bind(errorLogger);
 export const logWarning = errorLogger.logWarning.bind(errorLogger);
 export const logInfo = errorLogger.logInfo.bind(errorLogger);
 export const createAppError = errorLogger.createAppError.bind(errorLogger);
-export const addBreadcrumb = errorLogger.addBreadcrumb.bind(errorLogger);
-export const setUserContext = errorLogger.setUserContext.bind(errorLogger);
-export const clearUserContext = errorLogger.clearUserContext.bind(errorLogger);
-export const flushErrors = errorLogger.flush.bind(errorLogger); 
+export const addSentryBreadcrumb = errorLogger.addSentryBreadcrumb.bind(errorLogger);
+export const setUserSentryContext = errorLogger.setUserSentryContext.bind(errorLogger);
+export const clearUserSentryContext = errorLogger.clearUserSentryContext.bind(errorLogger);
+export const flushSentryErrors = errorLogger.flush.bind(errorLogger); 

@@ -1,8 +1,6 @@
 "use client";
 
 import {
-    AlertTriangle,
-    Calendar,
     ChevronDown,
     ChevronUp,
     Download,
@@ -10,8 +8,16 @@ import {
 } from 'lucide-react';
 import { useEffect, useState } from 'react';
 import { useHourlyDataQuery } from '../../hooks/use-hourly-data-query';
+import {
+    calculateTotalCost,
+    calculateTotalUsage,
+    formatHour,
+    roundCurrency,
+    roundPrice,
+    roundUsage
+} from '../../utils/electricity-calculations';
+import QueryStateWrapper from '../common/query-state-wrapper';
 import RefreshHeader from '../common/refresh-header';
-import { Alert, AlertDescription } from '../ui/alert';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -24,15 +30,13 @@ import {
     TableHeader,
     TableRow,
 } from '../ui/table';
-
-interface ElectricityDataTableProps {
-    meteringPointId: string;
-    date: string;
-    title?: string;
-}
-
-type SortField = 'hour' | 'usage' | 'price' | 'cost';
-type SortDirection = 'asc' | 'desc';
+import type {
+    ElectricityDataRow,
+    ElectricityDataTableContentProps,
+    ElectricityDataTableProps,
+    SortDirection,
+    SortField
+} from './types';
 
 export default function ElectricityDataTable({
     meteringPointId,
@@ -53,7 +57,7 @@ export default function ElectricityDataTable({
         staleTime: 1000 * 60 * 2, // 2 minutes
     });
 
-    const [filteredData, setFilteredData] = useState<any[]>([]);
+    const [filteredData, setFilteredData] = useState<ElectricityDataRow[]>([]);
     const [sortField, setSortField] = useState<SortField>('hour');
     const [sortDirection, setSortDirection] = useState<SortDirection>('asc');
     const [searchTerm, setSearchTerm] = useState('');
@@ -129,10 +133,6 @@ export default function ElectricityDataTable({
         }
     };
 
-    const formatHour = (hour: number) => {
-        return `${hour.toString().padStart(2, '0')}:00`;
-    };
-
     const getUsageBadgeColor = (usage: number, maxUsage: number) => {
         const percentage = (usage / maxUsage) * 100;
         if (percentage >= 80) return 'destructive';
@@ -154,9 +154,9 @@ export default function ElectricityDataTable({
             headers.join(','),
             ...filteredData.map(row => [
                 formatHour(row.hour),
-                row.usage.toFixed(2),
-                row.price.toFixed(4),
-                row.cost.toFixed(2)
+                roundUsage(row.usage),
+                roundPrice(row.price),
+                roundCurrency(row.cost)
             ].join(','))
         ].join('\n');
 
@@ -171,91 +171,119 @@ export default function ElectricityDataTable({
         URL.revokeObjectURL(url);
     };
 
-    if (isLoading) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>{title}</CardTitle>
-                    <CardDescription>Loading electricity data...</CardDescription>
-                </CardHeader>
-                <CardContent>
-                    <div className="space-y-4">
-                        <div className="h-8 bg-muted rounded animate-pulse"></div>
-                        <div className="h-4 bg-muted rounded animate-pulse"></div>
-                        <div className="h-4 bg-muted rounded animate-pulse"></div>
-                    </div>
-                </CardContent>
-            </Card>
-        );
-    }
+    const loadingComponent = (
+        <Card>
+            <CardHeader>
+                <CardTitle>{title}</CardTitle>
+                <CardDescription>Loading electricity data...</CardDescription>
+            </CardHeader>
+            <CardContent>
+                <div className="space-y-4">
+                    <div className="h-8 bg-muted rounded animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded animate-pulse"></div>
+                    <div className="h-4 bg-muted rounded animate-pulse"></div>
+                </div>
+            </CardContent>
+        </Card>
+    );
 
-    if (isError) {
-        const errorMessage = error instanceof Error ? error.message : 'An error occurred';
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>{title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Alert variant="destructive">
-                        <AlertTriangle className="h-4 w-4" />
-                        <AlertDescription>
-                            {errorMessage}
-                            <div className="mt-2">
-                                <Button
-                                    onClick={() => refetch()}
-                                    disabled={isRefetching}
-                                    variant="outline"
-                                    size="sm"
-                                >
-                                    {isRefetching ? 'Retrying...' : 'Try Again'}
-                                </Button>
-                            </div>
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
-        );
-    }
+    // Convert HourlyData to the format expected by calculation utilities
+    const usageData = rawData ? rawData.map(item => ({
+        timestamp: item.hour * 3600, // Convert hour to fake timestamp
+        kwh: item.usage
+    })) : [];
 
-    if (!rawData || rawData.length === 0) {
-        return (
-            <Card>
-                <CardHeader>
-                    <CardTitle>{title}</CardTitle>
-                </CardHeader>
-                <CardContent>
-                    <Alert>
-                        <Calendar className="h-4 w-4" />
-                        <AlertDescription>
-                            No data available for {new Date(date).toLocaleDateString()}
-                            <div className="mt-2">
-                                <Button
-                                    onClick={() => refetch()}
-                                    disabled={isFetching}
-                                    variant="outline"
-                                    size="sm"
-                                >
-                                    {isFetching ? 'Refreshing...' : 'Refresh'}
-                                </Button>
-                            </div>
-                        </AlertDescription>
-                    </Alert>
-                </CardContent>
-            </Card>
-        );
-    }
-
-    const maxUsage = Math.max(...rawData.map(d => d.usage));
-    const avgPrice = rawData.reduce((sum, d) => sum + d.price, 0) / rawData.length;
-    const totalUsage = rawData.reduce((sum, d) => sum + d.usage, 0);
-    const totalCost = rawData.reduce((sum, d) => sum + d.cost, 0);
+    // Use reusable calculation utilities
+    const maxUsage = rawData ? Math.max(...rawData.map(d => d.usage)) : 0;
+    // Calculate average price directly from simple data
+    const avgPrice = rawData && rawData.length > 0 ? rawData.reduce((sum, d) => sum + d.price, 0) / rawData.length : 0;
+    const totalUsage = calculateTotalUsage(usageData);
+    const totalCost = calculateTotalCost(usageData, rawData ? new Map(rawData.map(item => [item.hour, item.price])) : new Map());
 
     const SortIcon = ({ field }: { field: SortField }) => {
         if (sortField !== field) return null;
         return sortDirection === 'asc' ?
             <ChevronUp className="h-4 w-4" /> :
             <ChevronDown className="h-4 w-4" />;
+    };
+
+    return (
+        <QueryStateWrapper
+            isLoading={isLoading}
+            isError={isError}
+            error={error}
+            data={rawData}
+            isEmpty={!rawData || rawData.length === 0}
+            onRefetch={() => refetch()}
+            isRefetching={isRefetching}
+            isFetching={isFetching}
+            errorTitle="Error Loading Electricity Data"
+            noDataTitle="No Data Available"
+            noDataMessage={`No electricity data available for ${new Date(date).toLocaleDateString()}`}
+            loadingComponent={loadingComponent}
+        >
+            <ElectricityDataTableContent
+                title={title}
+                date={date}
+                rawData={rawData!}
+                filteredData={filteredData}
+                sortField={sortField}
+                sortDirection={sortDirection}
+                searchTerm={searchTerm}
+                maxUsage={maxUsage}
+                avgPrice={avgPrice}
+                totalUsage={totalUsage}
+                totalCost={totalCost}
+                isRefetching={isRefetching}
+                isFetching={isFetching}
+                onRefetch={() => refetch()}
+                onSort={handleSort}
+                onSearchChange={setSearchTerm}
+                onExportCSV={exportToCSV}
+            />
+        </QueryStateWrapper>
+    );
+}
+
+
+
+function ElectricityDataTableContent({
+    title,
+    date,
+    rawData,
+    filteredData,
+    sortField,
+    sortDirection,
+    searchTerm,
+    maxUsage,
+    avgPrice,
+    totalUsage,
+    totalCost,
+    isRefetching,
+    isFetching,
+    onRefetch,
+    onSort,
+    onSearchChange,
+    onExportCSV
+}: ElectricityDataTableContentProps) {
+    const SortIcon = ({ field }: { field: SortField }) => {
+        if (sortField !== field) return null;
+        return sortDirection === 'asc' ?
+            <ChevronUp className="h-4 w-4" /> :
+            <ChevronDown className="h-4 w-4" />;
+    };
+
+    const getUsageBadgeColor = (usage: number, maxUsage: number) => {
+        const percentage = (usage / maxUsage) * 100;
+        if (percentage >= 80) return 'destructive';
+        if (percentage >= 60) return 'outline';
+        return 'secondary';
+    };
+
+    const getPriceBadgeColor = (price: number, avgPrice: number) => {
+        if (price > avgPrice * 1.2) return 'destructive';
+        if (price > avgPrice * 1.1) return 'outline';
+        return 'default';
     };
 
     return (
@@ -266,10 +294,10 @@ export default function ElectricityDataTable({
                 subtitle={`Data for ${new Date(date).toLocaleDateString()} • ${filteredData.length} of ${rawData.length} hours`}
                 isRefreshing={isRefetching}
                 isFetching={isFetching}
-                onRefresh={() => refetch()}
+                onRefresh={onRefetch}
             >
                 <Button
-                    onClick={exportToCSV}
+                    onClick={onExportCSV}
                     variant="outline"
                     size="sm"
                     disabled={!filteredData.length}
@@ -287,7 +315,7 @@ export default function ElectricityDataTable({
                             <Input
                                 placeholder="Search hours, usage, price, or cost..."
                                 value={searchTerm}
-                                onChange={(e) => setSearchTerm(e.target.value)}
+                                onChange={(e) => onSearchChange(e.target.value)}
                                 className="pl-8"
                             />
                         </div>
@@ -296,15 +324,15 @@ export default function ElectricityDataTable({
                 <CardContent>
                     <div className="grid gap-4 md:grid-cols-3 mb-6">
                         <div className="text-center">
-                            <p className="text-2xl font-bold">{totalUsage.toFixed(1)} kWh</p>
+                            <p className="text-2xl font-bold">{roundUsage(totalUsage)} kWh</p>
                             <p className="text-sm text-muted-foreground">Total Usage</p>
                         </div>
                         <div className="text-center">
-                            <p className="text-2xl font-bold">{totalCost.toFixed(2)} BGN</p>
+                            <p className="text-2xl font-bold">{roundCurrency(totalCost)} BGN</p>
                             <p className="text-sm text-muted-foreground">Total Cost</p>
                         </div>
                         <div className="text-center">
-                            <p className="text-2xl font-bold">{avgPrice.toFixed(4)}</p>
+                            <p className="text-2xl font-bold">{roundPrice(avgPrice)}</p>
                             <p className="text-sm text-muted-foreground">Avg Price (BGN/kWh)</p>
                         </div>
                     </div>
@@ -315,7 +343,7 @@ export default function ElectricityDataTable({
                                 <TableRow>
                                     <TableHead
                                         className="cursor-pointer hover:bg-muted/50"
-                                        onClick={() => handleSort('hour')}
+                                        onClick={() => onSort('hour')}
                                     >
                                         <div className="flex items-center space-x-1">
                                             <span>Hour</span>
@@ -324,7 +352,7 @@ export default function ElectricityDataTable({
                                     </TableHead>
                                     <TableHead
                                         className="cursor-pointer hover:bg-muted/50"
-                                        onClick={() => handleSort('usage')}
+                                        onClick={() => onSort('usage')}
                                     >
                                         <div className="flex items-center space-x-1">
                                             <span>Usage (kWh)</span>
@@ -333,7 +361,7 @@ export default function ElectricityDataTable({
                                     </TableHead>
                                     <TableHead
                                         className="cursor-pointer hover:bg-muted/50"
-                                        onClick={() => handleSort('price')}
+                                        onClick={() => onSort('price')}
                                     >
                                         <div className="flex items-center space-x-1">
                                             <span>Price (BGN/kWh)</span>
@@ -342,7 +370,7 @@ export default function ElectricityDataTable({
                                     </TableHead>
                                     <TableHead
                                         className="cursor-pointer hover:bg-muted/50"
-                                        onClick={() => handleSort('cost')}
+                                        onClick={() => onSort('cost')}
                                     >
                                         <div className="flex items-center space-x-1">
                                             <span>Cost (BGN)</span>
@@ -358,9 +386,9 @@ export default function ElectricityDataTable({
                                         <TableCell className="font-medium">
                                             {formatHour(row.hour)}
                                         </TableCell>
-                                        <TableCell>{row.usage.toFixed(2)}</TableCell>
-                                        <TableCell>{row.price.toFixed(4)}</TableCell>
-                                        <TableCell>{row.cost.toFixed(2)}</TableCell>
+                                        <TableCell>{roundUsage(row.usage)}</TableCell>
+                                        <TableCell>{roundPrice(row.price)}</TableCell>
+                                        <TableCell>{roundCurrency(row.cost)}</TableCell>
                                         <TableCell>
                                             <div className="flex space-x-1">
                                                 <Badge variant={getUsageBadgeColor(row.usage, maxUsage)}>

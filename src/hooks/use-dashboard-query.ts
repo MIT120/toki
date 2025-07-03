@@ -127,8 +127,8 @@ export function useDashboardQuery(options: UseDashboardQueryOptions = {}) {
 
             // Don't retry on 4xx errors
             if (error instanceof Error && 'status' in error) {
-                const status = (error as any).status;
-                if (status >= 400 && status < 500) {
+                const status = (error as { status?: number }).status;
+                if (status && status >= 400 && status < 500) {
                     return false;
                 }
             }
@@ -172,26 +172,10 @@ export function useDashboardQuery(options: UseDashboardQueryOptions = {}) {
     };
 
     return {
-        // Data and states
-        data: query.data,
-        isLoading: query.isLoading,
-        isError: query.isError,
-        error: query.error,
-        isSuccess: query.isSuccess,
-        isFetching: query.isFetching,
-        isRefetching: query.isRefetching,
-
+        ...query,
         // Actions
         refetch: refetchWithAnalytics,
         invalidateAndRefetch,
         prefetchDashboard,
-
-        // React Query specific
-        dataUpdatedAt: query.dataUpdatedAt,
-        errorUpdatedAt: query.errorUpdatedAt,
-        failureCount: query.failureCount,
-        failureReason: query.failureReason,
-        fetchStatus: query.fetchStatus,
-        status: query.status,
     };
 }

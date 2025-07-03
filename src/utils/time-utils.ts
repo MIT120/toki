@@ -1,76 +1,153 @@
-export function getHourFromTimestamp(timestamp: number): number {
-    return new Date(timestamp * 1000).getHours();
+import {
+    formatHour,
+    getHourFromTimestamp,
+    timestampToDate
+} from './electricity-calculations';
+
+/**
+ * Time utilities for bakery electricity data
+ */
+
+// Re-export time utilities for backward compatibility
+export { formatHour, getHourFromTimestamp, timestampToDate };
+
+export function formatTimeFromTimestamp(timestamp: number): string {
+    const date = timestampToDate(timestamp);
+    return date.toLocaleTimeString();
 }
 
-export function formatHour(hour: number): string {
-    return `${hour.toString().padStart(2, '0')}:00`;
+export function formatDateFromTimestamp(timestamp: number): string {
+    const date = timestampToDate(timestamp);
+    return date.toLocaleDateString();
 }
 
-export function createTimestampForHour(date: Date, hour: number): number {
-    const timestamp = new Date(date);
-    timestamp.setHours(hour, 0, 0, 0);
-    return Math.floor(timestamp.getTime() / 1000);
+export function getISODateFromTimestamp(timestamp: number): string {
+    return timestampToDate(timestamp).toISOString().split('T')[0];
 }
 
-export function isNightHour(hour: number): boolean {
-    return hour >= 22 || hour <= 5;
+export function isValidTimestamp(timestamp: number): boolean {
+    const date = timestampToDate(timestamp);
+    return !isNaN(date.getTime()) && date.getFullYear() > 1970;
 }
 
-export function isMorningPeakHour(hour: number): boolean {
-    return hour >= 8 && hour <= 10;
+export function formatTimestamp(timestamp: number, format: 'ISO' | 'date' | 'time' | 'datetime' = 'ISO'): string {
+    const date = timestampToDate(timestamp);
+
+    switch (format) {
+        case 'ISO':
+            return date.toISOString();
+        case 'date':
+            return date.toISOString().split('T')[0];
+        case 'time':
+            return `${formatHour(date.getHours())}:${date.getMinutes().toString().padStart(2, '0')}`;
+        case 'datetime':
+            return `${date.toISOString().split('T')[0]} ${formatHour(date.getHours())}:${date.getMinutes().toString().padStart(2, '0')}`;
+        default:
+            return date.toISOString();
+    }
 }
 
-export function isEveningPeakHour(hour: number): boolean {
-    return hour >= 18 && hour <= 21;
+export function getDateFromTimestamp(timestamp: number): string {
+    return timestampToDate(timestamp).toISOString().split('T')[0];
 }
 
-export function isPeakHour(hour: number): boolean {
-    return isMorningPeakHour(hour) || isEveningPeakHour(hour);
+export function isSameHour(timestamp1: number, timestamp2: number): boolean {
+    return getHourFromTimestamp(timestamp1) === getHourFromTimestamp(timestamp2);
 }
 
-export function getBakeryUsageMultiplier(hour: number): number {
-    if (hour >= 5 && hour <= 10) return 1.8; // Morning rush
-    if (hour >= 11 && hour <= 14) return 1.4; // Lunch prep
-    if (hour >= 15 && hour <= 18) return 1.2; // Afternoon
-    if (hour >= 22 || hour <= 4) return 0.3; // Night
-    return 1; // Default
+export function isSameDay(timestamp1: number, timestamp2: number): boolean {
+    const date1 = getDateFromTimestamp(timestamp1);
+    const date2 = getDateFromTimestamp(timestamp2);
+    return date1 === date2;
 }
 
-export function getBasePriceForHour(hour: number): number {
-    if (isMorningPeakHour(hour)) return 0.18; // Morning peak
-    if (isEveningPeakHour(hour)) return 0.16; // Evening peak
-    if (isNightHour(hour)) return 0.08; // Off-peak night
-    return 0.12; // Base price
-}
-
-export function filterByHourRange(
-    data: { timestamp: number }[],
-    startHour: number,
-    endHour: number
-): typeof data {
-    return data.filter(item => {
-        const hour = getHourFromTimestamp(item.timestamp);
-        if (startHour <= endHour) {
-            return hour >= startHour && hour <= endHour;
-        } else {
-            // Handle overnight ranges (e.g., 22 to 5)
-            return hour >= startHour || hour <= endHour;
-        }
-    });
-}
-
-export function groupByHour<T extends { timestamp: number }>(
-    data: T[]
-): Record<number, T[]> {
-    const grouped: Record<number, T[]> = {};
+export function groupByHour<T extends { timestamp: number }>(data: T[]): Map<number, T[]> {
+    const grouped = new Map<number, T[]>();
 
     for (const item of data) {
         const hour = getHourFromTimestamp(item.timestamp);
-        if (!grouped[hour]) {
-            grouped[hour] = [];
+        if (!grouped.has(hour)) {
+            grouped.set(hour, []);
         }
-        grouped[hour].push(item);
+        grouped.get(hour)!.push(item);
     }
 
     return grouped;
+}
+
+export function groupByDate<T extends { timestamp: number }>(data: T[]): Map<string, T[]> {
+    const grouped = new Map<string, T[]>();
+
+    for (const item of data) {
+        const date = getDateFromTimestamp(item.timestamp);
+        if (!grouped.has(date)) {
+            grouped.set(date, []);
+        }
+        grouped.get(date)!.push(item);
+    }
+
+    return grouped;
+}
+
+export function sortByTimestamp<T extends { timestamp: number }>(data: T[], ascending: boolean = true): T[] {
+    return [...data].sort((a, b) => ascending ? a.timestamp - b.timestamp : b.timestamp - a.timestamp);
+}
+
+export function getTimeRange<T extends { timestamp: number }>(data: T[]): {
+    start: number;
+    end: number;
+    startFormatted: string;
+    endFormatted: string;
+    duration: number;
+} | null {
+    if (data.length === 0) return null;
+
+    const sorted = sortByTimestamp(data);
+    const start = sorted[0].timestamp;
+    const end = sorted[sorted.length - 1].timestamp;
+
+    return {
+        start,
+        end,
+        startFormatted: formatTimestamp(start, 'datetime'),
+        endFormatted: formatTimestamp(end, 'datetime'),
+        duration: (end - start) / 3600
+    };
+}
+
+export function createTimeSlots(startHour: number, endHour: number): Array<{
+    hour: number;
+    formatted: string;
+    label: string;
+}> {
+    const slots = [];
+    let current = startHour;
+
+    while (current !== endHour) {
+        slots.push({
+            hour: current,
+            formatted: formatHour(current),
+            label: `${formatHour(current)} - ${formatHour((current + 1) % 24)}`
+        });
+        current = (current + 1) % 24;
+    }
+
+    return slots;
+}
+
+export function getBusinessHours(): { start: number; end: number; hours: number[] } {
+    return {
+        start: 8,
+        end: 18,
+        hours: Array.from({ length: 11 }, (_, i) => i + 8)
+    };
+}
+
+export function getOffPeakHours(): { hours: number[] } {
+    const businessHours = getBusinessHours().hours;
+    const allHours = Array.from({ length: 24 }, (_, i) => i);
+
+    return {
+        hours: allHours.filter(hour => !businessHours.includes(hour))
+    };
 } 

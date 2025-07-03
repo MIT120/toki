@@ -2,6 +2,7 @@ import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import React from 'react'
 import { AnalyticsProvider } from '../src/contexts/analytics-context'
+import { TranslationProvider } from '../src/contexts/translation-context'
 import { QueryProvider } from '../src/providers/query-provider'
 import './globals.css'
 
@@ -20,25 +21,27 @@ export default function RootLayout({
     return (
         <html lang="en">
             <body className={inter.className}>
-                <QueryProvider>
-                    <AnalyticsProvider
-                        initialUserId="user-123"
-                        initialUser={{
-                            id: "user-123",
-                            name: "Strahil",
-                            email: "strahil@bakery.com",
-                            role: "owner",
-                            customerName: "My Amazing Bakery EOOD",
-                            meteringPointsCount: 3
-                        }}
-                        enableClientSideTracking={true}
-                        enableServerSideTracking={true}
-                        enablePerformanceTracking={true}
-                        enableErrorTracking={true}
-                    >
-                        {children}
-                    </AnalyticsProvider>
-                </QueryProvider>
+                <TranslationProvider>
+                    <QueryProvider>
+                        <AnalyticsProvider
+                            initialUserId="user-123"
+                            initialUser={{
+                                id: "user-123",
+                                name: "Strahil",
+                                email: "strahil@bakery.com",
+                                role: "owner",
+                                customerName: "My Amazing Bakery EOOD",
+                                meteringPointsCount: 3
+                            }}
+                            enableClientSideTracking={true}
+                            enableServerSideTracking={true}
+                            enablePerformanceTracking={true}
+                            enableErrorTracking={true}
+                        >
+                            {children}
+                        </AnalyticsProvider>
+                    </QueryProvider>
+                </TranslationProvider>
             </body>
         </html>
     )
