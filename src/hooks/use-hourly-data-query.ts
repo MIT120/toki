@@ -68,7 +68,7 @@ export function useHourlyDataQuery(
         refetchInterval,
         retry: (failureCount, error) => {
             if (error instanceof Error) {
-                analytics.trackError(error, { userAction: 'fetch_hourly_data' });
+                analytics.trackError(error, { userAction: 'view' });
             }
             return failureCount < 3;
         },

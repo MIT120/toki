@@ -68,7 +68,7 @@ export function useCostAnalysisQuery(
         staleTime,
         retry: (failureCount, error) => {
             if (error instanceof Error) {
-                analytics.trackError(error, { userAction: 'fetch_cost_analysis' });
+                analytics.trackError(error, { userAction: 'analyze' });
             }
             return failureCount < 3;
         },

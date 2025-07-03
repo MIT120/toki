@@ -11,7 +11,7 @@ import {
     trackMeteringPointInteractionAction,
     trackPerformanceAction,
 } from '../services/analytics-service';
-import { AnalyticsCallbacks, AnalyticsContext, AnalyticsEventProperties, AnalyticsProperties, RefreshAnalyticsOptions } from '../types';
+import { AnalyticsCallbacks, AnalyticsContext, AnalyticsEventProperties, AnalyticsProperties, RefreshAnalyticsOptions, UserAction } from '../types';
 import { logError } from './error-logger';
 
 /**
@@ -66,7 +66,7 @@ export const buildErrorEventProperties = (
     context: {
         component?: string;
         apiEndpoint?: string;
-        userAction?: string;
+        userAction?: UserAction;
     } = {},
     additionalProps: Record<string, any> = {}
 ): AnalyticsEventProperties => ({
@@ -74,7 +74,7 @@ export const buildErrorEventProperties = (
     error_stack: error.stack,
     component_name: context.component,
     api_endpoint: context.apiEndpoint,
-    action_type: context.userAction as any,
+    action_type: context.userAction,
     timestamp: new Date().toISOString(),
     ...additionalProps,
 });
@@ -159,7 +159,7 @@ export function useAnalyticsWrapper(options: AnalyticsWrapperOptions) {
     const trackError = useCallback(
         async (
             error: Error,
-            context: { userAction?: string } = {},
+            context: { userAction?: UserAction } = {},
             additionalProps: Record<string, any> = {}
         ) => {
             if (!enableAnalytics || !analytics.isInitialized) return;
@@ -168,7 +168,7 @@ export function useAnalyticsWrapper(options: AnalyticsWrapperOptions) {
                 await analytics.trackErrorWithContext(error, {
                     component: componentName,
                     apiEndpoint,
-                    userAction: context.userAction,
+                    userAction: context.userAction || 'view',
                     ...additionalProps,
                 });
             } catch (error) {
@@ -250,9 +250,10 @@ export function useAnalyticsWrapper(options: AnalyticsWrapperOptions) {
                 const loadTime = Date.now() - startTime;
 
                 await trackError(error as Error, {
-                    userAction: operationName,
+                    userAction: 'analyze',
                 }, {
                     load_time: loadTime,
+                    operation_name: operationName,
                     ...additionalProps,
                 });
 
@@ -300,11 +301,12 @@ export function useAnalyticsWrapper(options: AnalyticsWrapperOptions) {
 
                     // Track error
                     await trackError(error as Error, {
-                        userAction: `fetch_${options.queryType}`,
+                        userAction: 'view',
                     }, {
                         metering_point_id: options.meteringPointId,
                         load_time: loadTime,
                         query_type: options.queryType,
+                        fetch_operation: `fetch_${options.queryType}`,
                         ...(options.onError ? options.onError(error as Error) : {}),
                     });
 
@@ -560,7 +562,7 @@ export const createAnalyticsWrapper = (baseContext: AnalyticsContext) => {
 
                 await trackErrorAction(baseContext.userId, error as Error, {
                     component: componentName,
-                    userAction: baseContext.userAction as 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze',
+                    userAction: baseContext.userAction,
                 });
 
                 throw error;
@@ -596,7 +598,7 @@ export const createAnalyticsWrapper = (baseContext: AnalyticsContext) => {
 
                     await trackErrorAction(baseContext.userId, error as Error, {
                         component: componentName,
-                        userAction: baseContext.userAction as 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze',
+                        userAction: baseContext.userAction,
                     });
 
                     throw error;
@@ -605,10 +607,10 @@ export const createAnalyticsWrapper = (baseContext: AnalyticsContext) => {
         },
 
         // Error tracking
-        trackError: async (error: Error, context: { component?: string; userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze' } = {}) => {
+        trackError: async (error: Error, context: { component?: string; userAction?: UserAction } = {}) => {
             await trackErrorAction(baseContext.userId, error, {
                 component: context.component || baseContext.component,
-                userAction: context.userAction || (baseContext.userAction as 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze' | undefined),
+                userAction: context.userAction || baseContext.userAction,
             });
 
             logError(error, {
@@ -784,7 +786,7 @@ export const trackError = async (
     context: {
         component?: string;
         apiEndpoint?: string;
-        userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
+        userAction?: UserAction;
     } = {},
     additionalProps: AnalyticsEventProperties = {}
 ) => {

@@ -1,4 +1,6 @@
 // Service Response Types
+import type { UserAction } from './index';
+
 export interface ServiceResponse<T = unknown> {
     success: boolean;
     data?: T;
@@ -71,7 +73,7 @@ export interface FeatureFlagContext {
 export interface ErrorContext {
     component?: string;
     apiEndpoint?: string;
-    userAction?: string;
+    userAction?: UserAction;
     metadata?: Record<string, string | number | boolean>;
 }
 
@@ -93,7 +95,7 @@ export interface AnalyticsProperties {
 export interface AnalyticsContext {
     userId: string;
     sessionId?: string;
-    userAction?: string;
+    userAction?: UserAction;
     component?: string;
     timestamp?: Date;
 }

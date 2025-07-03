@@ -8,6 +8,7 @@ import {
     DashboardEventType,
     MonthlySummaryData,
     ServiceResponse,
+    UserAction,
     WeeklySummaryData
 } from '../types';
 
@@ -193,13 +194,14 @@ export async function trackInsightViewAction(
     );
 }
 
+
 export async function trackErrorAction(
     userId: string,
     error: Error,
     context?: {
         component?: string;
         apiEndpoint?: string;
-        userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
+        userAction?: UserAction;
     }
 ): Promise<ServiceResponse<void>> {
     return await trackEventAction(

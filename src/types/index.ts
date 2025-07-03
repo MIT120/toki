@@ -1,3 +1,6 @@
+// Analytics User Action Types
+export type UserAction = 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
+
 export interface PriceRecord {
     timestamp: number;
     price: number;
@@ -172,7 +175,7 @@ export interface AnalyticsEventProperties {
 
     // User Interaction Events
     component_name?: string;
-    action_type?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
+    action_type?: UserAction;
     filter_applied?: string;
 
     // Performance Events

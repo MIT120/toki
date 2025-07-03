@@ -94,7 +94,7 @@ export function useInsightsQuery(
                 analytics.trackErrorWithContext(error, {
                     component: 'InsightsQuery',
                     apiEndpoint: `/api/insights/${meteringPointId}`,
-                    userAction: 'fetch_insights',
+                    userAction: 'view',
                 });
             }
             return failureCount < 3;

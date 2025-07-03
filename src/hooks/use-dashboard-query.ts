@@ -133,7 +133,7 @@ export function useDashboardQuery(options: UseDashboardQueryOptions = {}) {
                 analytics.trackErrorWithContext(error, {
                     component: 'DashboardQuery',
                     apiEndpoint: '/api/dashboard',
-                    userAction: 'fetch_dashboard_data',
+                    userAction: 'view',
                 });
             }
 

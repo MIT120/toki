@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { useAnalytics } from '../hooks/use-analytics';
-import { AnalyticsUser } from '../types';
+import { AnalyticsUser, UserAction } from '../types';
 
 interface AnalyticsContextType {
     userId: string;
@@ -154,7 +154,7 @@ export function useDashboardAnalytics() {
         context?: {
             component?: string;
             apiEndpoint?: string;
-            userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
+            userAction?: UserAction;
         }
     ) => {
         if (!isInitialized) return;

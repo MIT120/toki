@@ -18,7 +18,8 @@ import {
 import {
     AnalyticsEventProperties,
     AnalyticsUser,
-    DashboardEventType
+    DashboardEventType,
+    UserAction
 } from '../types';
 
 interface UseAnalyticsOptions {
@@ -75,7 +76,7 @@ interface UseAnalyticsReturn {
         context?: {
             component?: string;
             apiEndpoint?: string;
-            userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
+            userAction?: UserAction;
         }
     ) => Promise<void>;
 
@@ -246,7 +247,7 @@ export function useAnalytics(options: UseAnalyticsOptions = {}): UseAnalyticsRet
         context?: {
             component?: string;
             apiEndpoint?: string;
-            userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
+            userAction?: UserAction;
         }
     ) => {
         if (enableErrorTracking && enableServerSideTracking) {
