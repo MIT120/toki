@@ -1,6 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    output: 'standalone',
+    // output: 'standalone', // TEMPORARILY REMOVE THIS
     trailingSlash: true,
     skipTrailingSlashRedirect: true,
     productionBrowserSourceMaps: false,
