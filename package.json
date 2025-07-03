@@ -5,8 +5,8 @@
   "main": "index.js",
   "scripts": {
     "dev": "next dev",
-    "build": "next build",
-    "postbuild": "echo 'Build completed - translations will be copied by amplify.yml'",
+    "build": "next build && echo 'Checking build output...' && ls -la .next/",
+    "postbuild": "echo 'Build completed - checking for server files...' && ls -la .next/standalone/ || echo 'Standalone build complete'",
     "start": "next start",
     "lint": "next lint",
     "lint:fix": "next lint --fix",

@@ -1,12 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-    trailingSlash: true,
-    skipTrailingSlashRedirect: true,
+    output: 'standalone',
     productionBrowserSourceMaps: false,
-    images: {
-        unoptimized: true
-    },
-    // Removed complex compiler and file tracing options
+    // Removed static export configs that interfere with SSR
     async rewrites() {
         return [
             {
