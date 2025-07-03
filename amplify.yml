@@ -7,14 +7,32 @@ frontend:
         - npm install -g pnpm@10.4.1
         # Install dependencies
         - pnpm install --frozen-lockfile
+        # Verify translation files exist
+        - echo "Checking translation files..."
+        - ls -la data/translations/
+        - ls -la data/translations/en/
+        - ls -la data/translations/bg/
     build:
       commands:
         # Build the application
         - pnpm run build
+        # Copy translation files to build directory for serverless functions
+        - echo "Copying translation files to build directory..."
+        - mkdir -p .next/standalone/data/translations
+        - cp -r data/translations/* .next/standalone/data/translations/
+        # Also copy to server directory
+        - mkdir -p .next/server/data/translations
+        - cp -r data/translations/* .next/server/data/translations/
+        # Verify files were copied
+        - echo "Verifying translation files in build..."
+        - ls -la .next/standalone/data/translations/
+        - ls -la .next/server/data/translations/
   artifacts:
     baseDirectory: .next
     files:
       - "**/*"
+    # Also include the data directory in the root
+    name: toki-build
   cache:
     paths:
       - node_modules/**/*
@@ -32,3 +50,13 @@ frontend:
           value: "1; mode=block"
         - key: "Referrer-Policy"
           value: "strict-origin-when-cross-origin"
+        - key: "Cache-Control"
+          value: "public, max-age=31536000, immutable"
+    - pattern: "/api/translations/**/*"
+      headers:
+        - key: "Cache-Control"
+          value: "public, max-age=1800, stale-while-revalidate=3600"
+        - key: "Access-Control-Allow-Origin"
+          value: "*"
+        - key: "Access-Control-Allow-Methods"
+          value: "GET"
