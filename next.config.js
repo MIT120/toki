@@ -1,7 +1,6 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
     productionBrowserSourceMaps: false,
-    // Removed static export configs that interfere with SSR
     async rewrites() {
         return [
             {

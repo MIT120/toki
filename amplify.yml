@@ -9,6 +9,8 @@ frontend:
         - pnpm install --frozen-lockfile
     build:
       commands:
+        # Set production environment
+        - export NODE_ENV=production
         # Build the application
         - pnpm run build
   artifacts:
