@@ -4,18 +4,14 @@ frontend:
     preBuild:
       commands:
         - npm install -g pnpm@10.4.1
-        - pnpm install --frozen-lockfile
+        - pnpm install
     build:
       commands:
         - pnpm run build
-        - cp -r data .next/standalone/
-        - cp .next/static .next/standalone/.next/static -r
-        - cp public .next/standalone/public -r
   artifacts:
-    baseDirectory: .next/standalone
+    baseDirectory: .
     files:
       - "**/*"
   cache:
     paths:
       - node_modules/**/*
-      - .next/cache/**/*
