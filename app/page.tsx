@@ -27,10 +27,8 @@ function ElectricityDashboardContent() {
     const [availableDates, setAvailableDates] = useState<string[]>([]);
 
     const availableMeters = [
-        { id: '1234', name: 'Main Bakery', location: 'Production Floor' },
-        { id: '5678', name: 'Secondary Bakery', location: 'Packaging Area' },
-        { id: '9012', name: 'Office Building', location: 'Administrative' },
-        { id: '3456', name: 'Warehouse', location: 'Storage Area' }
+        { id: '1234', name: 'Main Bakery', location: 'Oven & Baking Area' },
+        { id: '5678', name: 'Secondary Bakery', location: 'Mixing & Prep Area' },
     ];
 
     const currentMeter = availableMeters.find(meter => meter.id === selectedMeter);
