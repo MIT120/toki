@@ -6,11 +6,6 @@ const nextConfig = {
     images: {
         unoptimized: true
     },
-    outputFileTracingIncludes: {
-        '/api/**/*': ['./data/**/*'],
-        '/': ['./data/translations/**/*'],
-        '/api/translations/**/*': ['./data/translations/**/*'],
-    },
     async rewrites() {
         return [
             {
