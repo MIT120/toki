@@ -11,7 +11,24 @@ frontend:
       commands:
         # Build the application
         - pnpm run build
-        # Copy translation files to standalone build (with fallback)
+        # Verify required files exist before copying
+        - echo "Verifying Next.js standalone build structure..."
+        - |
+          if [ -f ".next/standalone/server.js" ]; then
+            echo "✅ server.js found"
+          else
+            echo "❌ server.js not found"
+            ls -la .next/standalone/
+          fi
+        - |
+          if [ -f ".next/standalone/.next/required-server-files.json" ]; then
+            echo "✅ required-server-files.json found"
+          else
+            echo "❌ required-server-files.json not found"
+            echo "Contents of .next/standalone/.next/:"
+            ls -la .next/standalone/.next/ || echo "Directory doesn't exist"
+          fi
+        # Copy translation files to standalone build
         - echo "Copying translation files to standalone build..."
         - mkdir -p .next/standalone/data
         - |
@@ -24,9 +41,17 @@ frontend:
             echo "Checking if they exist elsewhere..."
             find . -name "translations" -type d
           fi
-        # Copy static files for standalone build
+        # Copy static files more carefully to preserve existing structure
         - echo "Setting up standalone build structure..."
-        - cp -r .next/static .next/standalone/.next/
+        - |
+          if [ -d ".next/static" ]; then
+            echo "Copying static files..."
+            mkdir -p .next/standalone/.next/static
+            cp -r .next/static/* .next/standalone/.next/static/
+            echo "Static files copied"
+          else
+            echo "No static directory found"
+          fi
         - |
           if [ -d "public" ]; then
             echo "Copying public directory..."
@@ -34,38 +59,24 @@ frontend:
           else
             echo "No public directory found, skipping..."
           fi
-        # Verify translation files are available
-        - echo "Verifying translation files in standalone build..."
-        - |
-          if [ -d ".next/standalone/data/translations" ]; then
-            echo "✅ Translation files found in standalone build"
-            echo "Available locales:"
-            ls -la .next/standalone/data/translations/
-            echo "English translations:"
-            ls -la .next/standalone/data/translations/en/ | head -5
-            echo "Bulgarian translations:"
-            ls -la .next/standalone/data/translations/bg/ | head -5
-          else
-            echo "❌ Translation files not found in standalone build"
-            echo "Contents of .next/standalone/data/:"
-            ls -la .next/standalone/data/
-          fi
-        # Verify standalone build structure
-        - echo "Verifying standalone build structure..."
-        - ls -la .next/standalone/
-        - |
-          if [ -f ".next/standalone/server.js" ]; then
-            echo "✅ server.js found"
-          else
-            echo "❌ server.js not found"
-          fi
+        # Final verification
+        - echo "Final verification of standalone build..."
         - |
           if [ -f ".next/standalone/.next/required-server-files.json" ]; then
-            echo "✅ required-server-files.json found"
+            echo "✅ required-server-files.json still exists"
+            echo "File size: $(stat -c%s .next/standalone/.next/required-server-files.json 2>/dev/null || stat -f%z .next/standalone/.next/required-server-files.json)"
           else
-            echo "❌ required-server-files.json not found"
+            echo "❌ required-server-files.json missing after copy operations"
             echo "Contents of .next/standalone/.next/:"
-            ls -la .next/standalone/.next/ || echo "Directory doesn't exist"
+            ls -la .next/standalone/.next/
+          fi
+        - |
+          if [ -d ".next/standalone/data/translations" ]; then
+            echo "✅ Translation files confirmed in standalone build"
+            echo "Available locales:"
+            ls -la .next/standalone/data/translations/
+          else
+            echo "❌ Translation files missing in standalone build"
           fi
         # Clean up build to reduce size
         - echo "Cleaning up build to reduce size..."
