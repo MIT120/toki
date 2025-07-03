@@ -2,7 +2,11 @@
 
 import { useTranslation } from '@/hooks/use-translation';
 import { Card, CardContent } from '../ui/card';
-import type { MetricCardProps } from './types';
+import type { MetricCardProps, MetricData } from './types';
+
+interface MetricCardExtendedProps extends Omit<MetricCardProps, 'title' | 'description'> {
+    metricData?: MetricData;
+}
 
 export function MetricCard({
     title,
@@ -17,12 +21,22 @@ export function MetricCard({
     trend,
     titleKey,
     descriptionKey,
-    namespace = 'common'
-}: MetricCardProps) {
+    namespace = 'common',
+    metricData
+}: MetricCardProps & MetricCardExtendedProps) {
     const { t } = useTranslation(namespace);
 
-    const displayTitle = titleKey ? t(titleKey) : title;
-    const displayDescription = descriptionKey ? t(descriptionKey) : description;
+    // Use metricData if provided, otherwise use individual props
+    const finalTitleKey = metricData?.titleKey || titleKey;
+    const finalDescriptionKey = metricData?.descriptionKey || descriptionKey;
+    const finalNamespace = metricData?.namespace || namespace;
+    const finalTitle = metricData?.title || title;
+    const finalDescription = metricData?.description || description;
+
+    const { t: tFinal } = useTranslation(finalNamespace);
+
+    const displayTitle = finalTitleKey ? tFinal(finalTitleKey) : finalTitle;
+    const displayDescription = finalDescriptionKey ? tFinal(finalDescriptionKey) : finalDescription;
 
     const cardClasses = onClick
         ? `cursor-pointer hover:shadow-md transition-shadow ${className}`
@@ -32,29 +46,46 @@ export function MetricCard({
 
     return (
         <Card className={cardClasses} onClick={onClick}>
-            <CardContent className={`flex items-center justify-between ${contentPadding}`}>
-                <div className="flex-1">
-                    <p className="text-sm font-medium text-muted-foreground">{displayTitle}</p>
-                    <div className="flex items-end gap-2 mt-1">
-                        <p className={`font-bold ${variant === 'compact' ? 'text-xl' : 'text-xl lg:text-2xl'}`}>
-                            {value}
-                        </p>
-                        {trend && (
-                            <span className={`text-xs ${trend.isPositive ? 'text-green-600' : 'text-red-600'}`}>
-                                {trend.isPositive ? '+' : ''}{trend.value}%
-                            </span>
+            <CardContent className={contentPadding}>
+                <div className="flex items-center justify-between space-y-0 pb-2">
+                    <div className="space-y-1 flex-1">
+                        <div className="flex items-center justify-between">
+                            <p className="text-sm font-medium leading-none">
+                                {displayTitle}
+                            </p>
+                            {badge && (
+                                <div className="ml-2">
+                                    {badge}
+                                </div>
+                            )}
+                        </div>
+                        {displayDescription && (
+                            <p className="text-xs text-muted-foreground">
+                                {displayDescription}
+                            </p>
                         )}
                     </div>
-                    {displayDescription && (
-                        <p className="text-xs text-muted-foreground mt-1">{displayDescription}</p>
-                    )}
-                    {trend?.label && (
-                        <p className="text-xs text-muted-foreground">{trend.label}</p>
-                    )}
+                    <Icon className={`h-4 w-4 ${iconColor}`} />
                 </div>
-                <div className="flex flex-col items-end gap-2">
-                    <Icon className={`${variant === 'compact' ? 'h-6 w-6' : 'h-6 w-6 lg:h-8 lg:w-8'} ${iconColor}`} />
-                    {badge}
+                <div className="space-y-1">
+                    <div className="flex items-baseline space-x-2">
+                        <div className="text-2xl font-bold">
+                            {value}
+                        </div>
+                        {trend && (
+                            <div className={`flex items-center text-xs ${trend.isPositive ? 'text-green-600' : 'text-red-600'
+                                }`}>
+                                <span>
+                                    {trend.isPositive ? '+' : ''}{trend.value}%
+                                </span>
+                                {trend.label && (
+                                    <span className="ml-1 text-muted-foreground">
+                                        {trend.label}
+                                    </span>
+                                )}
+                            </div>
+                        )}
+                    </div>
                 </div>
             </CardContent>
         </Card>

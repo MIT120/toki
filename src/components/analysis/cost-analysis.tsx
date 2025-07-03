@@ -8,6 +8,7 @@ import {
     Zap
 } from 'lucide-react';
 import { useCostAnalysisQuery } from '../../hooks/use-cost-analysis-query';
+import { useTranslation } from '../../hooks/use-translation';
 import {
     roundCurrency,
     roundPrice,
@@ -30,6 +31,9 @@ import type {
 } from './types';
 
 export default function CostAnalysisComponent({ meteringPointId, date }: CostAnalysisProps) {
+    const { t } = useTranslation('analysis');
+    const { t: tCommon } = useTranslation('common');
+
     const {
         data: costData,
         isLoading,
@@ -48,33 +52,37 @@ export default function CostAnalysisComponent({ meteringPointId, date }: CostAna
     const metricsData: MetricData[] = costData ? [
         {
             id: 'usage',
-            title: 'Total Usage',
-            value: `${roundUsage(costData.totalKwh)} kWh`,
+            titleKey: 'metrics.totalUsage',
+            value: `${roundUsage(costData.totalKwh)} ${tCommon('units.kWh')}`,
             icon: Zap,
-            iconColor: 'text-blue-500'
+            iconColor: 'text-blue-500',
+            namespace: 'analysis'
         },
         {
             id: 'cost',
-            title: 'Total Cost',
-            value: `${roundCurrency(costData.totalCost)} BGN`,
+            titleKey: 'metrics.totalCost',
+            value: `${roundCurrency(costData.totalCost)} ${tCommon('units.bgn')}`,
             icon: DollarSign,
-            iconColor: 'text-green-500'
+            iconColor: 'text-green-500',
+            namespace: 'analysis'
         },
         {
             id: 'price',
-            title: 'Avg Price',
+            titleKey: 'metrics.avgPrice',
             value: roundPrice(costData.averagePrice),
-            description: 'BGN/kWh',
+            description: tCommon('units.bgnPerKwh'),
             icon: TrendingUp,
-            iconColor: 'text-orange-500'
+            iconColor: 'text-orange-500',
+            namespace: 'analysis'
         },
         {
             id: 'peak',
-            title: 'Peak Hour',
+            titleKey: 'metrics.peakHour',
             value: `${costData.peakUsageHour}:00`,
-            description: 'Usage peak',
+            descriptionKey: 'descriptions.usagePeak',
             icon: Clock,
-            iconColor: 'text-purple-500'
+            iconColor: 'text-purple-500',
+            namespace: 'analysis'
         }
     ] : [];
 
@@ -87,9 +95,9 @@ export default function CostAnalysisComponent({ meteringPointId, date }: CostAna
             onRefetch={() => refetch()}
             isRefetching={isRefetching}
             isFetching={isFetching}
-            errorTitle="Error Loading Cost Analysis"
-            noDataTitle="No Cost Data"
-            noDataMessage={`No cost analysis data available for ${new Date(date).toLocaleDateString()}`}
+            errorTitle={tCommon('errors.general')}
+            noDataTitle={tCommon('labels.noData')}
+            noDataMessage={tCommon('placeholders.noDataMessage')}
         >
             <CostAnalysisContent
                 costData={costData!}
@@ -113,6 +121,9 @@ function CostAnalysisContent({
     onRefetch,
     metricsData
 }: CostAnalysisContentProps) {
+    const { t } = useTranslation('analysis');
+    const { t: tCommon } = useTranslation('common');
+
     const getEfficiencyScore = (costData: CostAnalysisData) => {
         const baseScore = 60;
         const usageBonus = Math.max(0, 20 - (costData.totalKwh / 10));
@@ -123,15 +134,22 @@ function CostAnalysisContent({
     const efficiencyScore = getEfficiencyScore(costData);
     const potentialSavings = roundCurrency(costData.totalCost * 0.15);
 
+    const getEfficiencyMessage = (score: number) => {
+        if (score >= 80) return t('efficiency.excellent');
+        if (score >= 60) return t('efficiency.good');
+        return t('efficiency.needsImprovement');
+    };
+
     return (
         <div className="space-y-6">
             {/* Header with refresh functionality */}
             <RefreshHeader
-                title="Cost Analysis"
-                subtitle={`Detailed cost breakdown for ${new Date(date).toLocaleDateString()}`}
+                titleKey="title"
+                subtitle={t('subtitle', { date: new Date(date).toLocaleDateString() })}
                 isRefreshing={isRefetching}
                 isFetching={isFetching}
                 onRefresh={onRefetch}
+                namespace="analysis"
             />
 
             {/* Metrics Grid */}
@@ -142,25 +160,23 @@ function CostAnalysisContent({
                     <CardHeader>
                         <CardTitle className="flex items-center gap-2">
                             <Target className="h-5 w-5" />
-                            Efficiency Score
+                            {t('metrics.efficiency')}
                         </CardTitle>
                         <CardDescription>
-                            Your bakery's energy efficiency for {new Date(date).toLocaleDateString()}
+                            {t('descriptions.efficiencyScore', { date: new Date(date).toLocaleDateString() })}
                         </CardDescription>
                     </CardHeader>
                     <CardContent className="space-y-4">
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium">Efficiency Score</span>
+                                <span className="text-sm font-medium">{t('efficiency.score')}</span>
                                 <Badge variant={efficiencyScore >= 80 ? "default" : efficiencyScore >= 60 ? "secondary" : "destructive"}>
-                                    {efficiencyScore}%
+                                    {efficiencyScore}{tCommon('units.percent')}
                                 </Badge>
                             </div>
                             <Progress value={efficiencyScore} className="h-3" />
                             <p className="text-xs text-muted-foreground">
-                                {efficiencyScore >= 80 ? "Excellent performance!" :
-                                    efficiencyScore >= 60 ? "Good performance with room for improvement." :
-                                        "Consider optimizing your energy usage patterns."}
+                                {getEfficiencyMessage(efficiencyScore)}
                             </p>
                         </div>
 
@@ -168,13 +184,13 @@ function CostAnalysisContent({
 
                         <div className="space-y-2">
                             <div className="flex justify-between items-center">
-                                <span className="text-sm font-medium">Potential Savings</span>
+                                <span className="text-sm font-medium">{t('savings.potential')}</span>
                                 <span className="text-sm font-bold text-green-600">
-                                    {potentialSavings} BGN
+                                    {potentialSavings} {tCommon('units.bgn')}
                                 </span>
                             </div>
                             <p className="text-xs text-muted-foreground">
-                                Estimated monthly savings through optimization
+                                {t('savings.monthly')}
                             </p>
                         </div>
                     </CardContent>
@@ -182,34 +198,36 @@ function CostAnalysisContent({
 
                 <RecommendationsList
                     recommendations={costData.suggestions || []}
-                    title="Smart Recommendations"
-                    description="AI-powered suggestions to reduce your energy costs"
+                    titleKey="recommendations.title"
+                    descriptionKey="recommendations.description"
+                    emptyMessageKey="recommendations.emptyMessage"
+                    namespace="analysis"
                 />
             </div>
 
             <Card>
                 <CardHeader>
-                    <CardTitle>Cost Breakdown Analysis</CardTitle>
+                    <CardTitle>{t('breakdown.title')}</CardTitle>
                     <CardDescription>
-                        Detailed analysis of your energy costs and usage patterns
+                        {t('breakdown.description')}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
                     <div className="grid gap-4 md:grid-cols-3">
                         <div className="text-center p-4 rounded-lg border">
-                            <p className="text-sm text-muted-foreground">Cost per kWh</p>
-                            <p className="text-xl font-bold">{roundPrice(costData.totalCost / costData.totalKwh)} BGN</p>
-                            <p className="text-xs text-muted-foreground">Average rate paid</p>
+                            <p className="text-sm text-muted-foreground">{t('breakdown.costPerKwh')}</p>
+                            <p className="text-lg font-bold">{roundPrice(costData.averagePrice)}</p>
+                            <p className="text-xs text-muted-foreground">{tCommon('units.bgnPerKwh')}</p>
                         </div>
                         <div className="text-center p-4 rounded-lg border">
-                            <p className="text-sm text-muted-foreground">Peak Cost Hour</p>
-                            <p className="text-xl font-bold">{costData.peakCostHour || costData.peakUsageHour}:00</p>
-                            <p className="text-xs text-muted-foreground">Highest cost period</p>
+                            <p className="text-sm text-muted-foreground">{t('breakdown.totalHours')}</p>
+                            <p className="text-lg font-bold">24</p>
+                            <p className="text-xs text-muted-foreground">{tCommon('units.hours')}</p>
                         </div>
                         <div className="text-center p-4 rounded-lg border">
-                            <p className="text-sm text-muted-foreground">Daily Average</p>
-                            <p className="text-xl font-bold">{roundUsage(costData.totalKwh / 24)} kWh/h</p>
-                            <p className="text-xs text-muted-foreground">Hourly consumption</p>
+                            <p className="text-sm text-muted-foreground">{t('breakdown.averageUsage')}</p>
+                            <p className="text-lg font-bold">{roundUsage(costData.totalKwh / 24)}</p>
+                            <p className="text-xs text-muted-foreground">{tCommon('units.kWh')}</p>
                         </div>
                     </div>
                 </CardContent>

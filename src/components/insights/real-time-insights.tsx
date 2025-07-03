@@ -7,6 +7,7 @@ import {
     Zap
 } from 'lucide-react';
 import { useInsightsQuery } from '../../hooks/use-insights-query';
+import { useTranslation } from '../../hooks/use-translation';
 import {
     roundCurrency,
     roundPrice,
@@ -32,6 +33,9 @@ export default function RealTimeInsightsComponent({
     autoRefresh = true,
     refreshInterval = 60000
 }: RealTimeInsightsProps) {
+    const { t } = useTranslation('insights');
+    const { t: tCommon } = useTranslation('common');
+
     const {
         data: insights,
         isLoading,
@@ -60,32 +64,36 @@ export default function RealTimeInsightsComponent({
     const metricsData: MetricData[] = insights ? [
         {
             id: 'current_usage',
-            title: 'Current Usage',
-            value: `${roundUsage(insights.currentUsage || 0)} kWh`,
+            titleKey: 'metrics.currentUsage',
+            value: `${roundUsage(insights.currentUsage || 0)} ${tCommon('units.kWh')}`,
             icon: Zap,
-            iconColor: 'text-blue-500'
+            iconColor: 'text-blue-500',
+            namespace: 'insights'
         },
         {
             id: 'current_cost',
-            title: 'Current Cost',
-            value: `${roundCurrency(insights.currentCost || 0)} BGN`,
+            titleKey: 'metrics.currentCost',
+            value: `${roundCurrency(insights.currentCost || 0)} ${tCommon('units.bgn')}`,
             icon: DollarSign,
-            iconColor: 'text-green-500'
+            iconColor: 'text-green-500',
+            namespace: 'insights'
         },
         {
             id: 'current_price',
-            title: 'Current Price',
+            titleKey: 'metrics.currentPrice',
             value: roundPrice(insights.currentPrice || 0),
-            description: 'BGN/kWh',
+            description: tCommon('units.bgnPerKwh'),
             icon: TrendingUp,
-            iconColor: 'text-orange-500'
+            iconColor: 'text-orange-500',
+            namespace: 'insights'
         },
         {
             id: 'hour_progress',
-            title: 'Hour Progress',
-            value: `${roundToDecimals(insights.hourProgress || 0, 0)}%`,
+            titleKey: 'metrics.hourProgress',
+            value: `${roundToDecimals(insights.hourProgress || 0, 0)}${tCommon('units.percent')}`,
             icon: Clock,
-            iconColor: 'text-purple-500'
+            iconColor: 'text-purple-500',
+            namespace: 'insights'
         }
     ] : [];
 
@@ -98,9 +106,9 @@ export default function RealTimeInsightsComponent({
             onRefetch={() => refetch()}
             isRefetching={isRefetching}
             isFetching={isFetching}
-            errorTitle="Error Loading Insights"
-            noDataTitle="No Insights Available"
-            noDataMessage="Real-time insights are not available at the moment."
+            errorTitle={t('errors.loadingTitle')}
+            noDataTitle={t('errors.noDataTitle')}
+            noDataMessage={t('errors.noDataMessage')}
         >
             <RealTimeInsightsContent
                 insights={insights!}
@@ -124,16 +132,20 @@ function RealTimeInsightsContent({
     isFetching,
     onRefetch
 }: RealTimeInsightsContentProps) {
+    const { t } = useTranslation('insights');
+    const { t: tCommon } = useTranslation('common');
+
     return (
         <div className="space-y-4">
             {/* Header with refresh functionality */}
             <RefreshHeader
-                title="Real-Time Insights"
-                subtitle={`Live monitoring and AI-powered recommendations • Last updated: ${formatTime(new Date(insights.lastUpdated))}`}
+                titleKey="title"
+                subtitle={t('subtitle', { timestamp: formatTime(new Date(insights.lastUpdated)) })}
                 isRefreshing={isRefetching}
                 isFetching={isFetching}
                 onRefresh={onRefetch}
                 showLastUpdated={false}
+                namespace="insights"
             >
                 <Clock className="h-5 w-5 text-muted-foreground" />
             </RefreshHeader>
@@ -148,8 +160,8 @@ function RealTimeInsightsContent({
                         <CardContent className="p-4">
                             <div className="space-y-2">
                                 <div className="flex items-center justify-between">
-                                    <span className="text-sm font-medium">Hour Progress</span>
-                                    <span className="text-sm">{roundToDecimals(insights.hourProgress || 0, 0)}%</span>
+                                    <span className="text-sm font-medium">{t('metrics.hourProgress')}</span>
+                                    <span className="text-sm">{roundToDecimals(insights.hourProgress || 0, 0)}{tCommon('units.percent')}</span>
                                 </div>
                                 <Progress value={insights.hourProgress || 0} className="h-2" />
                             </div>

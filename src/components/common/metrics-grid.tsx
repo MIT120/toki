@@ -1,6 +1,6 @@
 "use client";
 
-import MetricCard from './metric-card';
+import { MetricCard } from './metric-card';
 import type { MetricsGridProps } from './types';
 
 export function MetricsGrid({
@@ -9,17 +9,18 @@ export function MetricsGrid({
     variant = 'default',
     className = ""
 }: MetricsGridProps) {
-    const gridCols = {
-        2: 'md:grid-cols-2',
-        3: 'md:grid-cols-2 lg:grid-cols-3',
-        4: 'md:grid-cols-2 lg:grid-cols-4'
+    const gridColumns = {
+        2: 'grid-cols-1 md:grid-cols-2',
+        3: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3',
+        4: 'grid-cols-1 md:grid-cols-2 lg:grid-cols-4'
     };
 
     return (
-        <div className={`grid gap-4 ${gridCols[columns]} ${className}`}>
+        <div className={`grid gap-4 ${gridColumns[columns]} ${className}`}>
             {metrics.map((metric) => (
                 <MetricCard
                     key={metric.id}
+                    metricData={metric}
                     title={metric.title}
                     value={metric.value}
                     description={metric.description}
@@ -29,6 +30,9 @@ export function MetricsGrid({
                     variant={variant}
                     badge={metric.badge}
                     trend={metric.trend}
+                    titleKey={metric.titleKey}
+                    descriptionKey={metric.descriptionKey}
+                    namespace={metric.namespace}
                 />
             ))}
         </div>

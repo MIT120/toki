@@ -13,51 +13,44 @@ import DateSelector from '../src/components/filters/date-selector';
 import RealTimeInsightsComponent from '../src/components/insights/real-time-insights';
 import Navigation from '../src/components/layout/navigation';
 import ElectricityDataTable from '../src/components/tables/electricity-data-table';
+import { useTranslation } from '../src/hooks/use-translation';
 import { getAvailableDates } from '../src/services';
 
 export default function ElectricityDashboard() {
-    const [selectedDate, setSelectedDate] = useState('2022-05-27');
+    const { t } = useTranslation('page');
+    const { t: tFilters } = useTranslation('filters');
+    const { t: tCommon } = useTranslation('common');
+
+    const [selectedDate, setSelectedDate] = useState<string>('2022-04-10');
     const [selectedMeter, setSelectedMeter] = useState<string>('1234');
+    const [isLoadingDates, setIsLoadingDates] = useState(false);
     const [availableDates, setAvailableDates] = useState<string[]>([]);
-    const [isLoadingDates, setIsLoadingDates] = useState(true);
 
     const availableMeters = [
         { id: '1234', name: 'Main Bakery', location: 'Production Floor' },
-        { id: '5678', name: 'Retail Store', location: 'Customer Area' }
+        { id: '5678', name: 'Secondary Bakery', location: 'Packaging Area' },
+        { id: '9012', name: 'Office Building', location: 'Administrative' },
+        { id: '3456', name: 'Warehouse', location: 'Storage Area' }
     ];
 
-    // Load available dates dynamically
+    const currentMeter = availableMeters.find(meter => meter.id === selectedMeter);
+
     useEffect(() => {
-        async function loadAvailableDates() {
+        const loadAvailableDates = async () => {
             try {
                 setIsLoadingDates(true);
                 const dates = await getAvailableDates();
                 setAvailableDates(dates);
-
-                // If current selected date is not available, select the first available date
-                if (!dates.includes(selectedDate) && dates.length > 0) {
-                    setSelectedDate(dates[0]);
-                }
             } catch (error) {
-                console.error('Failed to load available dates:', error);
-                // Fallback to hardcoded dates
-                const fallbackDates = [
-                    '2022-05-25',
-                    '2022-05-26',
-                    '2022-05-27',
-                    '2022-05-28',
-                    '2022-05-29'
-                ];
-                setAvailableDates(fallbackDates);
+                console.error('Error loading available dates:', error);
+                setAvailableDates([]);
             } finally {
                 setIsLoadingDates(false);
             }
-        }
+        };
 
         loadAvailableDates();
-    }, [selectedDate]);
-
-    const currentMeter = availableMeters.find(m => m.id === selectedMeter);
+    }, []);
 
     return (
         <Navigation>
@@ -67,19 +60,19 @@ export default function ElectricityDashboard() {
                     <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                         <div className="space-y-1">
                             <h1 className="text-2xl lg:text-3xl font-bold tracking-tight">
-                                Electricity Management
+                                {t('title')}
                             </h1>
                             <p className="text-muted-foreground text-sm lg:text-base">
-                                Monitor and optimize your bakery's energy consumption
+                                {t('subtitle')}
                             </p>
                         </div>
                         <div className="flex flex-col sm:flex-row gap-2">
                             <div className="flex flex-col gap-2">
                                 <Badge variant="secondary" className="text-sm">
-                                    🔋 GCS + Local Data Active
+                                    {t('status.gcsDataActive')}
                                 </Badge>
                                 <Badge variant="outline" className="text-xs">
-                                    Real Data Available
+                                    {t('status.realDataAvailable')}
                                 </Badge>
                             </div>
                         </div>
@@ -92,12 +85,12 @@ export default function ElectricityDashboard() {
                             {/* Metering Point Selector */}
                             <Card>
                                 <CardHeader className="pb-3">
-                                    <CardTitle className="text-lg">Metering Point</CardTitle>
+                                    <CardTitle className="text-lg">{tFilters('meteringPoint.title')}</CardTitle>
                                 </CardHeader>
                                 <CardContent>
                                     <Select value={selectedMeter} onValueChange={setSelectedMeter}>
                                         <SelectTrigger className="w-full">
-                                            <SelectValue placeholder="Select meter" />
+                                            <SelectValue placeholder={tFilters('meteringPoint.selectMeter')} />
                                         </SelectTrigger>
                                         <SelectContent>
                                             {availableMeters.map((meter) => (
@@ -105,7 +98,7 @@ export default function ElectricityDashboard() {
                                                     <div className="flex flex-col">
                                                         <span className="font-medium">{meter.name}</span>
                                                         <span className="text-xs text-muted-foreground">
-                                                            {meter.location} • ID: {meter.id}
+                                                            {meter.location} • {tCommon('labels.id')}: {meter.id}
                                                         </span>
                                                     </div>
                                                 </SelectItem>
@@ -118,7 +111,7 @@ export default function ElectricityDashboard() {
                                             <h3 className="font-semibold text-sm">{currentMeter.name}</h3>
                                             <p className="text-xs text-muted-foreground mb-2">{currentMeter.location}</p>
                                             <Badge variant="secondary" className="text-xs">
-                                                ID: {currentMeter.id}
+                                                {tCommon('labels.id')}: {currentMeter.id}
                                             </Badge>
                                         </div>
                                     )}
@@ -130,7 +123,7 @@ export default function ElectricityDashboard() {
                                 selectedDate={selectedDate}
                                 onDateChange={setSelectedDate}
                                 availableDates={availableDates}
-                                title="Analysis Date"
+                                title={tFilters('dateSelector.title')}
                                 isLoading={isLoadingDates}
                             />
                         </div>
@@ -142,19 +135,19 @@ export default function ElectricityDashboard() {
                                 <div className="overflow-x-auto">
                                     <TabsList className="grid w-full min-w-[500px] lg:min-w-0 grid-cols-5">
                                         <TabsTrigger value="overview" className="text-xs lg:text-sm">
-                                            Overview
+                                            {tFilters('tabs.overview')}
                                         </TabsTrigger>
                                         <TabsTrigger value="charts" className="text-xs lg:text-sm">
-                                            Charts
+                                            {tFilters('tabs.charts')}
                                         </TabsTrigger>
                                         <TabsTrigger value="analysis" className="text-xs lg:text-sm">
-                                            Analysis
+                                            {tFilters('tabs.analysis')}
                                         </TabsTrigger>
                                         <TabsTrigger value="insights" className="text-xs lg:text-sm">
-                                            Insights
+                                            {tFilters('tabs.insights')}
                                         </TabsTrigger>
                                         <TabsTrigger value="data" className="text-xs lg:text-sm">
-                                            Data
+                                            {tFilters('tabs.data')}
                                         </TabsTrigger>
                                     </TabsList>
                                 </div>
@@ -169,7 +162,7 @@ export default function ElectricityDashboard() {
                                         <HourlyChart
                                             meteringPointId={selectedMeter}
                                             date={selectedDate}
-                                            title={`Hourly Data - ${currentMeter?.name || 'Selected Meter'}`}
+                                            title={`${tCommon('labels.hourlyData')} - ${currentMeter?.name || tCommon('labels.selectedMeter')}`}
                                         />
                                     </TabsContent>
 
@@ -193,7 +186,7 @@ export default function ElectricityDashboard() {
                                         <ElectricityDataTable
                                             meteringPointId={selectedMeter}
                                             date={selectedDate}
-                                            title={`Detailed Data - ${currentMeter?.name || 'Selected Meter'}`}
+                                            title={`${tCommon('labels.detailedData')} - ${currentMeter?.name || tCommon('labels.selectedMeter')}`}
                                         />
                                     </TabsContent>
                                 </div>

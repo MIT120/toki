@@ -1,12 +1,12 @@
 "use client";
 
 import {
-    AlertCircle,
     AlertTriangle,
     CheckCircle,
-    Info,
-    Lightbulb
+    Clock,
+    Info
 } from 'lucide-react';
+import { useTranslation } from '../../hooks/use-translation';
 import { roundCurrency } from '../../utils/electricity-calculations';
 import { Badge } from '../ui/badge';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../ui/card';
@@ -14,28 +14,46 @@ import type { Recommendation, RecommendationsListProps } from './types';
 
 export function RecommendationsList({
     recommendations = [],
-    title = "Smart Recommendations",
-    description = "AI-powered suggestions to optimize your energy usage",
-    emptyMessage = "Your energy usage is optimized! No specific recommendations at this time.",
+    title,
+    description,
+    emptyMessage,
     onRecommendationClick,
     className = "",
-    variant = 'default'
+    variant = 'default',
+    titleKey,
+    descriptionKey,
+    emptyMessageKey,
+    namespace = 'common'
 }: RecommendationsListProps) {
-    const getUrgencyIcon = (urgencyLevel?: 'low' | 'medium' | 'high') => {
-        switch (urgencyLevel) {
-            case 'high': return <AlertTriangle className="h-5 w-5 text-red-500" />;
-            case 'medium': return <AlertCircle className="h-5 w-5 text-yellow-500" />;
-            case 'low': return <Info className="h-5 w-5 text-green-500" />;
-            default: return <Lightbulb className="h-5 w-5 text-blue-500" />;
+    const { t } = useTranslation(namespace);
+
+    const displayTitle = titleKey ? t(titleKey) : title || "Smart Recommendations";
+    const displayDescription = descriptionKey ? t(descriptionKey) : description || "AI-powered suggestions to optimize your energy usage";
+    const displayEmptyMessage = emptyMessageKey ? t(emptyMessageKey) : emptyMessage || "Your energy usage is optimized! No specific recommendations at this time.";
+
+    const getUrgencyIcon = (level?: string) => {
+        switch (level) {
+            case 'high':
+                return <AlertTriangle className="h-5 w-5 text-red-500" />;
+            case 'medium':
+                return <Clock className="h-5 w-5 text-orange-500" />;
+            case 'low':
+                return <Info className="h-5 w-5 text-blue-500" />;
+            default:
+                return <Info className="h-5 w-5 text-blue-500" />;
         }
     };
 
-    const getUrgencyVariant = (urgencyLevel?: 'low' | 'medium' | 'high') => {
-        switch (urgencyLevel) {
-            case 'high': return 'destructive' as const;
-            case 'medium': return 'outline' as const;
-            case 'low': return 'default' as const;
-            default: return 'secondary' as const;
+    const getUrgencyVariant = (level?: string): "default" | "secondary" | "destructive" | "outline" => {
+        switch (level) {
+            case 'high':
+                return 'destructive';
+            case 'medium':
+                return 'outline';
+            case 'low':
+                return 'secondary';
+            default:
+                return 'secondary';
         }
     };
 
@@ -83,7 +101,7 @@ export function RecommendationsList({
                 ) : (
                     <div className="flex items-center gap-3 p-3 rounded-lg border bg-muted/50">
                         <CheckCircle className="h-5 w-5 text-green-500" />
-                        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+                        <p className="text-sm text-muted-foreground">{displayEmptyMessage}</p>
                     </div>
                 )}
             </div>
@@ -93,11 +111,8 @@ export function RecommendationsList({
     return (
         <Card className={className}>
             <CardHeader>
-                <CardTitle className="flex items-center gap-2">
-                    <Lightbulb className="h-5 w-5" />
-                    {title}
-                </CardTitle>
-                <CardDescription>{description}</CardDescription>
+                <CardTitle>{displayTitle}</CardTitle>
+                <CardDescription>{displayDescription}</CardDescription>
             </CardHeader>
             <CardContent className="space-y-3">
                 {recommendations.length > 0 ? (
@@ -106,7 +121,7 @@ export function RecommendationsList({
                         return (
                             <div
                                 key={index}
-                                className={`flex items-start gap-3 p-4 rounded-lg border bg-muted/50 hover:bg-muted/70 transition-colors ${onRecommendationClick ? 'cursor-pointer' : ''
+                                className={`flex items-start gap-3 p-3 rounded-lg border hover:bg-muted/50 transition-colors ${onRecommendationClick ? 'cursor-pointer' : ''
                                     }`}
                                 onClick={() => onRecommendationClick?.(rec, index)}
                             >
@@ -137,7 +152,7 @@ export function RecommendationsList({
                 ) : (
                     <div className="flex items-center gap-3 p-4 rounded-lg border bg-muted/50">
                         <CheckCircle className="h-5 w-5 text-green-500" />
-                        <p className="text-sm text-muted-foreground">{emptyMessage}</p>
+                        <p className="text-sm text-muted-foreground">{displayEmptyMessage}</p>
                     </div>
                 )}
             </CardContent>

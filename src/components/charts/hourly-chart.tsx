@@ -13,6 +13,7 @@ import {
     YAxis
 } from 'recharts';
 import { useHourlyDataQuery } from '../../hooks/use-hourly-data-query';
+import { useTranslation } from '../../hooks/use-translation';
 import {
     calculateTotalCost,
     calculateTotalUsage,
@@ -33,7 +34,12 @@ import type {
     TooltipProps
 } from './types';
 
-export default function HourlyChart({ meteringPointId, date, title = "Hourly Electricity Data" }: HourlyChartProps) {
+export default function HourlyChart({ meteringPointId, date, title }: HourlyChartProps) {
+    const { t } = useTranslation('charts');
+    const { t: tCommon } = useTranslation('common');
+
+    const defaultTitle = t('titles.hourlyData');
+
     const {
         data: hourlyData,
         isLoading,
@@ -52,12 +58,12 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
         if (active && payload && payload.length) {
             return (
                 <div className="bg-background border rounded-lg p-3 shadow-lg">
-                    <p className="font-medium">{`Hour: ${formatHour(Number(label) || 0)}`}</p>
+                    <p className="font-medium">{t('tooltip.hour', { hour: formatHour(Number(label) || 0) })}</p>
                     {payload.map((entry: any, index: number) => (
                         <p key={index} style={{ color: entry.color }} className="text-sm">
-                            {`${entry.dataKey === 'usage' ? 'Usage' :
-                                entry.dataKey === 'price' ? 'Price' : 'Cost'}: ${entry.value.toFixed(entry.dataKey === 'price' ? 4 : 2)} ${entry.dataKey === 'usage' ? 'kWh' :
-                                    entry.dataKey === 'price' ? 'BGN/kWh' : 'BGN'
+                            {`${entry.dataKey === 'usage' ? t('tooltip.usage') :
+                                entry.dataKey === 'price' ? t('tooltip.price') : t('tooltip.cost')}: ${entry.value.toFixed(entry.dataKey === 'price' ? 4 : 2)} ${entry.dataKey === 'usage' ? tCommon('units.kWh') :
+                                    entry.dataKey === 'price' ? tCommon('units.bgnPerKwh') : tCommon('units.bgn')
                                 }`}
                         </p>
                     ))}
@@ -83,36 +89,40 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
         return [
             {
                 id: 'usage',
-                title: 'Total Usage',
-                value: `${roundUsage(totalUsage)} kWh`,
+                titleKey: 'metrics.totalUsage',
+                value: `${roundUsage(totalUsage)} ${tCommon('units.kWh')}`,
                 icon: Zap,
-                iconColor: 'text-blue-500'
+                iconColor: 'text-blue-500',
+                namespace: 'charts'
             },
             {
                 id: 'cost',
-                title: 'Total Cost',
-                value: `${roundCurrency(totalCost)} BGN`,
+                titleKey: 'metrics.totalCost',
+                value: `${roundCurrency(totalCost)} ${tCommon('units.bgn')}`,
                 icon: DollarSign,
-                iconColor: 'text-green-500'
+                iconColor: 'text-green-500',
+                namespace: 'charts'
             },
             {
                 id: 'price',
-                title: 'Avg Price',
+                titleKey: 'metrics.avgPrice',
                 value: roundPrice(avgPrice),
-                description: 'BGN/kWh',
+                description: tCommon('units.bgnPerKwh'),
                 icon: TrendingUp,
-                iconColor: 'text-orange-500'
+                iconColor: 'text-orange-500',
+                namespace: 'charts'
             },
             {
                 id: 'peak',
-                title: 'Peak Usage',
+                titleKey: 'metrics.peakUsage',
                 value: formatHour(peakUsageHour.hour),
-                description: `${roundUsage(peakUsageHour.usage)} kWh`,
+                description: `${roundUsage(peakUsageHour.usage)} ${tCommon('units.kWh')}`,
                 icon: TrendingUp,
                 iconColor: 'text-purple-500',
+                namespace: 'charts',
                 badge: <StatusBadge
                     status={peakCostHour.hour === peakUsageHour.hour ? "high" : "low"}
-                    label={peakCostHour.hour === peakUsageHour.hour ? "High Cost" : "Normal"}
+                    label={peakCostHour.hour === peakUsageHour.hour ? tCommon('status.highCost') : tCommon('status.normal')}
                 />
             }
         ];
@@ -128,14 +138,14 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
             onRefetch={() => refetch()}
             isRefetching={isRefetching}
             isFetching={isFetching}
-            errorTitle="Error Loading Hourly Data"
-            noDataTitle="No Data Available"
-            noDataMessage={`No data available for ${new Date(date).toLocaleDateString()}`}
+            errorTitle={t('errors.loadingData')}
+            noDataTitle={t('errors.noDataAvailable')}
+            noDataMessage={t('errors.noDataMessage', { date: new Date(date).toLocaleDateString() })}
             loadingComponent={
                 <Card>
                     <CardHeader>
-                        <CardTitle>{title}</CardTitle>
-                        <CardDescription>Loading hourly data...</CardDescription>
+                        <CardTitle>{title || defaultTitle}</CardTitle>
+                        <CardDescription>{t('loading.description')}</CardDescription>
                     </CardHeader>
                     <CardContent>
                         <div className="h-[400px] bg-muted rounded animate-pulse"></div>
@@ -144,7 +154,7 @@ export default function HourlyChart({ meteringPointId, date, title = "Hourly Ele
             }
         >
             <HourlyChartContent
-                title={title}
+                title={title || defaultTitle}
                 date={date}
                 hourlyData={hourlyData!}
                 metricsData={metricsData}
@@ -169,12 +179,14 @@ function HourlyChartContent({
     onRefetch,
     CustomTooltip
 }: HourlyChartContentProps) {
+    const { t } = useTranslation('charts');
+
     return (
         <div className="space-y-4">
             {/* Header with refresh functionality */}
             <RefreshHeader
                 title={title}
-                subtitle={`Hourly breakdown for ${new Date(date).toLocaleDateString()}`}
+                subtitle={t('subtitles.hourlyBreakdown', { date: new Date(date).toLocaleDateString() })}
                 isRefreshing={isRefetching}
                 isFetching={isFetching}
                 onRefresh={onRefetch}
@@ -187,7 +199,7 @@ function HourlyChartContent({
                 <CardHeader>
                     <CardTitle>{title}</CardTitle>
                     <CardDescription>
-                        Hourly electricity usage, pricing, and costs for {new Date(date).toLocaleDateString()}
+                        {t('descriptions.hourlyData', { date: new Date(date).toLocaleDateString() })}
                     </CardDescription>
                 </CardHeader>
                 <CardContent>
@@ -202,48 +214,49 @@ function HourlyChartContent({
                                     bottom: 5,
                                 }}
                             >
-                                <CartesianGrid strokeDasharray="3 3" className="opacity-30" />
+                                <CartesianGrid strokeDasharray="3 3" />
                                 <XAxis
                                     dataKey="hour"
-                                    tickFormatter={formatHour}
-                                    className="text-xs"
+                                    tickFormatter={(hour) => formatHour(hour)}
+                                    stroke="#888888"
+                                    fontSize={12}
                                 />
                                 <YAxis
                                     yAxisId="left"
                                     orientation="left"
-                                    className="text-xs"
+                                    stroke="#888888"
+                                    fontSize={12}
                                 />
                                 <YAxis
                                     yAxisId="right"
                                     orientation="right"
-                                    className="text-xs"
+                                    stroke="#888888"
+                                    fontSize={12}
                                 />
                                 <Tooltip content={<CustomTooltip />} />
                                 <Legend />
                                 <Bar
                                     yAxisId="left"
                                     dataKey="usage"
+                                    name={t('legend.usage')}
                                     fill="#3b82f6"
-                                    name="Usage (kWh)"
-                                    radius={[2, 2, 0, 0]}
+                                    opacity={0.8}
+                                />
+                                <Bar
+                                    yAxisId="right"
+                                    dataKey="cost"
+                                    name={t('legend.cost')}
+                                    fill="#10b981"
+                                    opacity={0.8}
                                 />
                                 <Line
                                     yAxisId="right"
                                     type="monotone"
                                     dataKey="price"
+                                    name={t('legend.price')}
                                     stroke="#f59e0b"
                                     strokeWidth={2}
-                                    name="Price (BGN/kWh)"
-                                    dot={{ fill: '#f59e0b', strokeWidth: 2, r: 3 }}
-                                />
-                                <Line
-                                    yAxisId="right"
-                                    type="monotone"
-                                    dataKey="cost"
-                                    stroke="#ef4444"
-                                    strokeWidth={2}
-                                    name="Cost (BGN)"
-                                    dot={{ fill: '#ef4444', strokeWidth: 2, r: 3 }}
+                                    dot={{ r: 3 }}
                                 />
                             </ComposedChart>
                         </ResponsiveContainer>

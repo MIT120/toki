@@ -2,6 +2,7 @@
 
 import { Calendar, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useEffect, useState } from 'react';
+import { useTranslation } from '../../hooks/use-translation';
 import LoadingSkeleton from '../common/loading-skeleton';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
@@ -20,9 +21,10 @@ export default function DateSelector({
     selectedDate,
     onDateChange,
     availableDates = [],
-    title = "Select Date",
+    title,
     isLoading = false
 }: DateSelectorProps) {
+    const { t } = useTranslation('filters');
     const [currentDate, setCurrentDate] = useState(selectedDate);
 
     useEffect(() => {
@@ -70,12 +72,10 @@ export default function DateSelector({
     };
 
     const getQuickDateOptions = () => {
-        // Use known valid dates from our GCS data range (April 2022)
-        // Only dates 2022-04-10 to 2022-04-30 have complete data for both meters
         const validDates = [
-            { label: 'April 15', value: '2022-04-15' },
-            { label: 'April 20', value: '2022-04-20' },
-            { label: 'April 25', value: '2022-04-25' }
+            { label: t('quickDates.april15'), value: '2022-04-15' },
+            { label: t('quickDates.april20'), value: '2022-04-20' },
+            { label: t('quickDates.april25'), value: '2022-04-25' }
         ];
 
         return validDates.map(date => ({
@@ -95,12 +95,14 @@ export default function DateSelector({
         return nextDate <= today && isDateAvailable(nextDate);
     };
 
+    const displayTitle = title || t('dateSelector.title');
+
     return (
         <Card className="w-full">
             <CardHeader className="pb-3">
                 <CardTitle className="flex items-center gap-2 text-lg">
                     <Calendar className="h-5 w-5 text-primary" />
-                    {title}
+                    {displayTitle}
                 </CardTitle>
             </CardHeader>
             <CardContent className="space-y-6">
@@ -116,7 +118,7 @@ export default function DateSelector({
                             className="flex items-center gap-1 h-9 px-3"
                         >
                             <ChevronLeft className="h-4 w-4" />
-                            <span className="hidden sm:inline">Previous</span>
+                            <span className="hidden sm:inline">{t('dateSelector.previous')}</span>
                         </Button>
 
                         <Button
@@ -126,7 +128,7 @@ export default function DateSelector({
                             disabled={isLoading || !canGoToNextDay()}
                             className="flex items-center gap-1 h-9 px-3"
                         >
-                            <span className="hidden sm:inline">Next</span>
+                            <span className="hidden sm:inline">{t('dateSelector.next')}</span>
                             <ChevronRight className="h-4 w-4" />
                         </Button>
                     </div>
@@ -134,7 +136,7 @@ export default function DateSelector({
                     {/* Current Date Display */}
                     <div className="bg-gradient-to-r from-primary/10 to-primary/5 rounded-lg p-4 text-center border border-primary/20">
                         <div className="space-y-1">
-                            <p className="text-sm font-medium text-primary">Selected Date</p>
+                            <p className="text-sm font-medium text-primary">{t('dateSelector.selectedDate')}</p>
                             <p className="text-lg font-bold text-foreground hidden sm:block">
                                 {formatDateForDisplay(currentDate)}
                             </p>
@@ -151,7 +153,7 @@ export default function DateSelector({
                 {/* Date Input */}
                 <div className="space-y-2">
                     <label htmlFor="date-input" className="text-sm font-medium text-foreground">
-                        Select Specific Date
+                        {t('dateSelector.selectSpecificDate')}
                     </label>
                     <Input
                         id="date-input"
@@ -166,7 +168,7 @@ export default function DateSelector({
 
                 {/* Quick Select Options */}
                 <div className="space-y-3">
-                    <p className="text-sm font-medium text-foreground">Quick Select</p>
+                    <p className="text-sm font-medium text-foreground">{t('dateSelector.quickSelect')}</p>
                     <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                         {getQuickDateOptions().map((option) => (
                             <Button
@@ -180,7 +182,7 @@ export default function DateSelector({
                                 {option.label}
                                 {!option.available && (
                                     <Badge variant="secondary" className="ml-2 text-xs">
-                                        N/A
+                                        {t('dateSelector.notAvailable')}
                                     </Badge>
                                 )}
                             </Button>
@@ -192,9 +194,9 @@ export default function DateSelector({
                 {isLoading ? (
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-foreground">Available Dates</p>
+                            <p className="text-sm font-medium text-foreground">{t('dateSelector.availableDates')}</p>
                             <Badge variant="secondary" className="text-xs animate-pulse">
-                                Loading...
+                                {t('dateSelector.loading')}
                             </Badge>
                         </div>
                         <div className="max-h-32 overflow-y-auto border rounded-md p-2">
@@ -204,9 +206,9 @@ export default function DateSelector({
                 ) : availableDates.length > 0 ? (
                     <div className="space-y-3">
                         <div className="flex items-center justify-between">
-                            <p className="text-sm font-medium text-foreground">Available Dates</p>
+                            <p className="text-sm font-medium text-foreground">{t('dateSelector.availableDates')}</p>
                             <Badge variant="secondary" className="text-xs">
-                                {availableDates.length} available
+                                {availableDates.length} {t('dateSelector.available')}
                             </Badge>
                         </div>
                         <div className="max-h-32 overflow-y-auto border rounded-md p-2">
@@ -237,12 +239,12 @@ export default function DateSelector({
                 {/* Data Status Indicator */}
                 <div className="pt-2 border-t">
                     <div className="flex items-center justify-between text-xs">
-                        <span className="text-muted-foreground">Data Status:</span>
+                        <span className="text-muted-foreground">{t('dateSelector.dataStatus')}</span>
                         <Badge
                             variant={isDateAvailable(currentDate) ? "default" : "destructive"}
                             className="text-xs"
                         >
-                            {isDateAvailable(currentDate) ? "✓ Available" : "✗ No Data"}
+                            {isDateAvailable(currentDate) ? t('dateSelector.statusAvailable') : t('dateSelector.statusNoData')}
                         </Badge>
                     </div>
                 </div>

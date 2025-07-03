@@ -2,7 +2,7 @@ import { LucideIcon } from 'lucide-react';
 
 export interface MetricData {
     id: string;
-    title: string;
+    title?: string;
     value: string | number;
     description?: string;
     icon: LucideIcon;
@@ -14,6 +14,9 @@ export interface MetricData {
         isPositive?: boolean;
         label?: string;
     };
+    titleKey?: string;
+    descriptionKey?: string;
+    namespace?: string;
 }
 
 export interface Recommendation {
@@ -82,6 +85,10 @@ export interface RecommendationsListProps {
     onRecommendationClick?: (recommendation: Recommendation | string, index: number) => void;
     className?: string;
     variant?: 'default' | 'compact';
+    titleKey?: string;
+    descriptionKey?: string;
+    emptyMessageKey?: string;
+    namespace?: string;
 }
 
 export interface RefreshHeaderProps {
