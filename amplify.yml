@@ -8,20 +8,20 @@ frontend:
     build:
       commands:
         - pnpm run build
-        - echo "=== DEBUG: Build completed, checking .next directory ==="
+        - "echo '=== DEBUG: Build completed, checking .next directory ==='"
         - ls -la .next/
-        - echo "=== DEBUG: Checking standalone directory ==="
+        - "echo '=== DEBUG: Checking standalone directory ==='"
         - ls -la .next/standalone/
-        - echo "=== DEBUG: Checking .next/standalone/.next directory ==="
+        - "echo '=== DEBUG: Checking .next/standalone/.next directory ==='"
         - ls -la .next/standalone/.next/ || echo "No .next directory in standalone"
-        - echo "=== DEBUG: Looking for required-server-files.json ==="
+        - "echo '=== DEBUG: Looking for required-server-files.json ==='"
         - find .next -name "required-server-files.json" -type f || echo "required-server-files.json not found"
-        - echo "=== DEBUG: Ensuring required-server-files.json is in the right place ==="
+        - "echo '=== DEBUG: Ensuring required-server-files.json is in the right place ==='"
         - if [ -f .next/required-server-files.json ]; then cp .next/required-server-files.json .next/standalone/required-server-files.json; fi
         - if [ -f .next/standalone/.next/required-server-files.json ]; then cp .next/standalone/.next/required-server-files.json .next/standalone/required-server-files.json; fi
-        - echo "=== DEBUG: Copying translation files ==="
+        - "echo '=== DEBUG: Copying translation files ==='"
         - cp -r data .next/standalone/ || echo "Translation files copy completed"
-        - echo "=== DEBUG: Final standalone directory contents ==="
+        - "echo '=== DEBUG: Final standalone directory contents ==='"
         - ls -la .next/standalone/
   artifacts:
     baseDirectory: .next/standalone
