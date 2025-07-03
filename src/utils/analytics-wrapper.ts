@@ -1,4 +1,5 @@
 import { useCallback } from 'react';
+
 import { useDashboardAnalytics } from '../contexts/analytics-context';
 import {
     trackCostAnalysisAction,
@@ -559,7 +560,7 @@ export const createAnalyticsWrapper = (baseContext: AnalyticsContext) => {
 
                 await trackErrorAction(baseContext.userId, error as Error, {
                     component: componentName,
-                    userAction: baseContext.userAction,
+                    userAction: baseContext.userAction as 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze',
                 });
 
                 throw error;
@@ -572,15 +573,42 @@ export const createAnalyticsWrapper = (baseContext: AnalyticsContext) => {
             componentName: string
         ) => {
             return (async (...args: Parameters<T>) => {
-                return await this.trackPerformance(componentName, () => fn(...args));
+                const startTime = performance.now();
+                try {
+                    const result = await fn(...args);
+                    const endTime = performance.now();
+                    const loadTime = endTime - startTime;
+
+                    await trackPerformanceAction(baseContext.userId, {
+                        componentName,
+                        loadTime,
+                    });
+
+                    return result;
+                } catch (error) {
+                    const endTime = performance.now();
+                    const loadTime = endTime - startTime;
+
+                    await trackPerformanceAction(baseContext.userId, {
+                        componentName,
+                        loadTime,
+                    });
+
+                    await trackErrorAction(baseContext.userId, error as Error, {
+                        component: componentName,
+                        userAction: baseContext.userAction as 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze',
+                    });
+
+                    throw error;
+                }
             }) as T;
         },
 
         // Error tracking
-        trackError: async (error: Error, context: { component?: string; userAction?: string } = {}) => {
+        trackError: async (error: Error, context: { component?: string; userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze' } = {}) => {
             await trackErrorAction(baseContext.userId, error, {
                 component: context.component || baseContext.component,
-                userAction: context.userAction || baseContext.userAction,
+                userAction: context.userAction || (baseContext.userAction as 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze' | undefined),
             });
 
             logError(error, {
@@ -611,7 +639,7 @@ export const createAnalyticsWrapper = (baseContext: AnalyticsContext) => {
                 additionalProps?: AnalyticsProperties;
             }
         ) => {
-            return this.wrapWithAnalytics(
+            return wrapWithAnalytics(
                 loader,
                 'data_loaded',
                 () => ({
@@ -620,12 +648,12 @@ export const createAnalyticsWrapper = (baseContext: AnalyticsContext) => {
                     ...options.additionalProps,
                 }),
                 {
-                    onSuccess: (data) => ({
+                    onSuccess: (data: unknown) => ({
                         data_loaded: true,
                         // Don't include the actual data in analytics for privacy
                         data_size: Array.isArray(data) ? data.length : 1,
                     }),
-                    onError: (error) => ({
+                    onError: (error: Error) => ({
                         data_loaded: false,
                         error_type: error.name,
                     }),
@@ -677,24 +705,6 @@ export const createAnalyticsWrapper = (baseContext: AnalyticsContext) => {
  * Analytics wrapper functions for common dashboard actions
  */
 
-// Dashboard view analytics
-export const trackDashboardView = async (
-    userId: string,
-    meteringPointsCount: number,
-    totalConsumption: number,
-    totalCost: number,
-    loadTime?: number,
-    additionalProps: AnalyticsEventProperties = {}
-) => {
-    const { trackDashboardView: trackView } = useDashboardAnalytics();
-    return trackView(
-        meteringPointsCount,
-        totalConsumption,
-        totalCost,
-        loadTime,
-        additionalProps
-    );
-};
 
 // Metering point interaction analytics  
 export const trackMeteringPointClick = async (
@@ -774,7 +784,7 @@ export const trackError = async (
     context: {
         component?: string;
         apiEndpoint?: string;
-        userAction?: string;
+        userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
     } = {},
     additionalProps: AnalyticsEventProperties = {}
 ) => {

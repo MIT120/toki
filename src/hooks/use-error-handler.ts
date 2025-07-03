@@ -89,7 +89,7 @@ export function useErrorHandler(options: UseErrorHandlerOptions = {}) {
             handleError(error, {
                 action: operationName,
                 additionalData: {
-                    errorCode: response.errorCode,
+                    errorCode: response.errorCode || 'unknown',
                     serviceResponse: true,
                 },
                 ...additionalContext,

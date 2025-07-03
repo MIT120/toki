@@ -75,7 +75,7 @@ interface UseAnalyticsReturn {
         context?: {
             component?: string;
             apiEndpoint?: string;
-            userAction?: string;
+            userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
         }
     ) => Promise<void>;
 
@@ -246,7 +246,7 @@ export function useAnalytics(options: UseAnalyticsOptions = {}): UseAnalyticsRet
         context?: {
             component?: string;
             apiEndpoint?: string;
-            userAction?: string;
+            userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
         }
     ) => {
         if (enableErrorTracking && enableServerSideTracking) {

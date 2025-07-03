@@ -154,7 +154,7 @@ export function useDashboardAnalytics() {
         context?: {
             component?: string;
             apiEndpoint?: string;
-            userAction?: string;
+            userAction?: 'click' | 'view' | 'filter' | 'export' | 'refresh' | 'select' | 'analyze';
         }
     ) => {
         if (!isInitialized) return;

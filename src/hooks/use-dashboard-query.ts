@@ -6,13 +6,25 @@ import { useDashboardAnalytics } from '../contexts/analytics-context';
 
 interface DashboardOverview {
     customer: {
+        id: string;
         name: string;
         owner: string;
+        meteringPoints: Array<{
+            id: string;
+            name: string;
+            location?: string;
+            todayUsage: number;
+            todayCost: number;
+            status: 'normal' | 'high' | 'alert';
+        }>;
     };
     meteringPoints: Array<{
         id: string;
         name: string;
         location?: string;
+        todayUsage: number;
+        todayCost: number;
+        status: 'normal' | 'high' | 'alert';
     }>;
     todayData: {
         totalKwh: number;

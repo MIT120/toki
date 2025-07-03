@@ -73,12 +73,6 @@ export default function ElectricityDataTable({
             return;
         }
 
-        filterAndSortData();
-    }, [rawData, searchTerm, sortField, sortDirection]);
-
-    const filterAndSortData = () => {
-        if (!rawData) return;
-
         let filtered = [...rawData];
 
         // Filter by search term
@@ -126,7 +120,7 @@ export default function ElectricityDataTable({
         });
 
         setFilteredData(filtered);
-    };
+    }, [rawData, searchTerm, sortField, sortDirection]);
 
     const handleSort = (field: SortField) => {
         if (sortField === field) {
