@@ -8,9 +8,11 @@ frontend:
     build:
       commands:
         - pnpm run build
-        - cp -r data .next/
+        - cp -r data .next/standalone/
+        - cp .next/static .next/standalone/.next/static -r
+        - cp public .next/standalone/public -r
   artifacts:
-    baseDirectory: .
+    baseDirectory: .next/standalone
     files:
       - "**/*"
   cache:
