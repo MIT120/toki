@@ -3,93 +3,16 @@ frontend:
   phases:
     preBuild:
       commands:
-        # Install pnpm
         - npm install -g pnpm@10.4.1
-        # Install dependencies
         - pnpm install --frozen-lockfile
     build:
       commands:
-        # Build the application
         - pnpm run build
-        # Verify required files exist before copying
-        - echo "Verifying Next.js standalone build structure..."
-        - |
-          if [ -f ".next/standalone/server.js" ]; then
-            echo "✅ server.js found"
-          else
-            echo "❌ server.js not found"
-            ls -la .next/standalone/
-          fi
-        - |
-          if [ -f ".next/standalone/.next/required-server-files.json" ]; then
-            echo "✅ required-server-files.json found"
-          else
-            echo "❌ required-server-files.json not found"
-            echo "Contents of .next/standalone/.next/:"
-            ls -la .next/standalone/.next/ || echo "Directory doesn't exist"
-          fi
-        # Copy translation files to standalone build
-        - echo "Copying translation files to standalone build..."
-        - mkdir -p .next/standalone/data
-        - |
-          if [ -d "data/translations" ]; then
-            echo "Translation files found, copying..."
-            cp -r data/translations .next/standalone/data/
-            echo "Translation files copied successfully"
-          else
-            echo "Warning: Translation files not found in data/translations"
-            echo "Checking if they exist elsewhere..."
-            find . -name "translations" -type d
-          fi
-        # Copy static files more carefully to preserve existing structure
-        - echo "Setting up standalone build structure..."
-        - |
-          if [ -d ".next/static" ]; then
-            echo "Copying static files..."
-            mkdir -p .next/standalone/.next/static
-            cp -r .next/static/* .next/standalone/.next/static/
-            echo "Static files copied"
-          else
-            echo "No static directory found"
-          fi
-        - |
-          if [ -d "public" ]; then
-            echo "Copying public directory..."
-            cp -r public .next/standalone/
-          else
-            echo "No public directory found, skipping..."
-          fi
-        # Final verification
-        - echo "Final verification of standalone build..."
-        - |
-          if [ -f ".next/standalone/.next/required-server-files.json" ]; then
-            echo "✅ required-server-files.json still exists"
-            echo "File size: $(stat -c%s .next/standalone/.next/required-server-files.json 2>/dev/null || stat -f%z .next/standalone/.next/required-server-files.json)"
-          else
-            echo "❌ required-server-files.json missing after copy operations"
-            echo "Contents of .next/standalone/.next/:"
-            ls -la .next/standalone/.next/
-          fi
-        - |
-          if [ -d ".next/standalone/data/translations" ]; then
-            echo "✅ Translation files confirmed in standalone build"
-            echo "Available locales:"
-            ls -la .next/standalone/data/translations/
-          else
-            echo "❌ Translation files missing in standalone build"
-          fi
-        # Clean up build to reduce size
-        - echo "Cleaning up build to reduce size..."
-        - rm -rf .next/cache
-        - find .next -name "*.map" -delete
-        - echo "Build size after cleanup:"
-        - du -sh .next/standalone/
-        - echo "Build complete!"
+        - cp -r data/translations .next/standalone/data/
   artifacts:
     baseDirectory: .next/standalone
     files:
       - "**/*"
-    name: toki-build
   cache:
     paths:
       - node_modules/**/*
